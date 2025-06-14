@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة المستخدمين{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-users me-2"></i>
+                    إدارة المستخدمين
+                </h2>
+                <div>
+                    <a href="{{ url_for('admin.create_user') }}" class="btn btn-success me-2">
+                        <i class="fas fa-user-plus me-2"></i>
+                        إضافة مستخدم جديد
+                    </a>
+                    {% if request.args.get('from') == 'admin_dashboard' %}
+                    <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة إلى لوحة التحكم
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ users.total }}</h4>
+                            <p class="mb-0">إجمالي المستخدمين</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ users.items | selectattr('is_active') | list | length }}</h4>
+                            <p class="mb-0">المستخدمون المفعلون</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-check fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ users.items | selectattr('is_admin') | list | length }}</h4>
+                            <p class="mb-0">المديرون</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-shield fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ users.items | rejectattr('is_active') | list | length }}</h4>
+                            <p class="mb-0">المستخدمون المعطلون</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-times fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">قائمة المستخدمين</h5>
+        </div>
+        <div class="card-body">
+            {% if users.items %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th>البريد الإلكتروني</th>
+                                <th>القسم</th>
+                                <th>الدور</th>
+                                <th>الحالة</th>
+                                <th>نوع المستخدم</th>
+                                <th>آخر دخول</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users.items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-3">
+                                                {% if user.role and user.role.name == 'super_admin' %}
+                                                    <i class="fas fa-crown fa-2x text-warning"></i>
+                                                {% elif user.is_admin %}
+                                                    <i class="fas fa-user-shield fa-2x text-primary"></i>
+                                                {% else %}
+                                                    <i class="fas fa-user-circle fa-2x text-muted"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <strong>{{ user.get_full_name() }}</strong>
+                                                <br><small class="text-muted">{{ user.username }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.department or 'غير محدد' }}</td>
+                                    <td>
+                                        {% if user.role %}
+                                            <span class="badge bg-{{ 'warning' if user.role.name == 'super_admin' else 'primary' }}">
+                                                {{ user.role.description }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">بدون دور</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="badge bg-success">مفعل</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">معطل</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-warning">مدير</span>
+                                        {% else %}
+                                            <span class="badge bg-info">مستخدم عادي</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.last_login %}
+                                            {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                            <span class="text-muted">لم يسجل دخول</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('admin.user_permissions', user_id=user.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="إدارة الصلاحيات">
+                                                <i class="fas fa-user-cog"></i>
+                                            </a>
+                                            <a href="{{ url_for('admin.edit_user', id=user.id) }}" 
+                                               class="btn btn-sm btn-outline-success" 
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if user.role and user.role.name != 'super_admin' %}
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-{{ 'danger' if user.is_active else 'success' }}"
+                                                        onclick="toggleUserStatus({{ user.id }})"
+                                                        title="{{ 'تعطيل' if user.is_active else 'تفعيل' }}">
+                                                    <i class="fas fa-{{ 'user-times' if user.is_active else 'user-check' }}"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if users.pages > 1 %}
+                    <nav aria-label="صفحات المستخدمين">
+                        <ul class="pagination justify-content-center">
+                            {% if users.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.list_users', page=users.prev_num) }}">السابق</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in users.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != users.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.list_users', page=page_num) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">…</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if users.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.list_users', page=users.next_num) }}">التالي</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">لا يوجد مستخدمون</h4>
+                    <p class="text-muted">لم يتم العثور على أي مستخدمين في النظام.</p>
+                    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>
+                        إضافة أول مستخدم
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleUserStatus(userId) {
+    if (confirm('هل أنت متأكد من تغيير حالة هذا المستخدم؟')) {
+        const csrfToken = document.querySelector('meta[name=csrf-token]').getAttribute('content');
+
+        const formData = new FormData();
+        formData.append('csrf_token', csrfToken);
+
+        fetch(`/admin/users/${userId}/toggle-status`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ أثناء تحديث حالة المستخدم');
+        });
+    }
+}
+</script>
+{% endblock %}

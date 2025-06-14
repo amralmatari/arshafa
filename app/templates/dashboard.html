@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% set title = "لوحة التحكم" %}
+
+{% block content %}
+<div class="container">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h2 class="card-title mb-0">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        مرحباً {{ current_user.get_full_name() }}
+                    </h2>
+                    <p class="card-text mb-0">
+                        آخر زيارة: 
+                        <span>
+                            {{ current_user.last_seen.strftime('%Y/%m/%d %H:%M') if current_user.last_seen else 'غير محدد' }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Statistics -->
+    {% if user_stats %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">إحصائياتك</h4>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-primary">{{ user_stats.total_documents }}</div>
+                    <div class="stat-label">إجمالي الوثائق</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-warning">{{ user_stats.draft_documents }}</div>
+                    <div class="stat-label">المسودات</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-info">{{ user_stats.under_review_documents }}</div>
+                    <div class="stat-label">قيد المراجعة</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-success">{{ user_stats.approved_documents }}</div>
+                    <div class="stat-label">معتمدة</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-secondary">{{ user_stats.archived_documents }}</div>
+                    <div class="stat-label">مؤرشفة</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- System Statistics (Admin Only) -->
+    {% if system_stats and current_user.can('manage_system') %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">إحصائيات النظام</h4>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-primary">{{ system_stats.total_documents }}</div>
+                    <div class="stat-label">إجمالي الوثائق</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-success">{{ system_stats.total_users }}</div>
+                    <div class="stat-label">المستخدمون النشطون</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-info">{{ system_stats.total_categories }}</div>
+                    <div class="stat-label">الفئات</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card text-center">
+                <div class="card-body">
+                    <div class="stat-number text-warning">{{ system_stats.documents_this_month }}</div>
+                    <div class="stat-label">وثائق هذا الشهر</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">إجراءات سريعة</h4>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('documents.upload') }}" class="text-decoration-none">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-upload fa-2x text-primary mb-3"></i>
+                        <h6 class="card-title">رفع وثيقة جديدة</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('main.search') }}" class="text-decoration-none">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-search fa-2x text-success mb-3"></i>
+                        <h6 class="card-title">البحث في الوثائق</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('admin.list_categories') }}" class="text-decoration-none">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-folder fa-2x text-info mb-3"></i>
+                        <h6 class="card-title">تصفح الفئات</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('auth.profile') }}" class="text-decoration-none">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="fas fa-user fa-2x text-warning mb-3"></i>
+                        <h6 class="card-title">الملف الشخصي</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Recent Documents -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        الوثائق الحديثة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_documents %}
+                        <div class="list-group list-group-flush">
+                            {% for document in recent_documents %}
+                            <div class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="me-auto">
+                                    <div class="fw-bold">
+                                        <a href="{{ url_for('documents.view_document', id=document.id) }}" class="text-decoration-none">
+                                            {{ document.title or document.title_ar }}
+                                        </a>
+                                    </div>
+                                    <small class="text-muted">
+                                        {{ document.category.name if document.category else 'غير مصنف' }}
+                                        {% if document.updated_at %}
+                                        • {{ document.updated_at.strftime('%Y/%m/%d %H:%M') }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge bg-{{ document.get_status_color() }} rounded-pill">
+                                    {{ document.status|document_status }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('documents.index') }}" class="btn btn-outline-primary btn-sm">
+                                عرض جميع الوثائق
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">لا توجد وثائق حديثة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activities -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        الأنشطة الحديثة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activities %}
+                        <div class="list-group list-group-flush">
+                            {% for activity in recent_activities %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ activity.action_description }}</h6>
+                                    <small>
+                                        {% if activity.created_at %}
+                                            {{ activity.created_at.strftime('%Y/%m/%d %H:%M') }}
+                                        {% else %}
+                                            غير محدد
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                {% if activity.description %}
+                                <p class="mb-1 small">{{ activity.description }}</p>
+                                {% endif %}
+                                {% if activity.target_name %}
+                                <small class="text-muted">{{ activity.target_name }}</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if current_user.can('view_audit_logs') %}
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('admin.list_logs') }}" class="btn btn-outline-primary btn-sm">
+                                عرض سجل الأنشطة الكامل
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted text-center">لا توجد أنشطة حديثة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Expiring Documents Alert -->
+    {% if expiring_soon %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    وثائق تنتهي صلاحيتها قريباً
+                </h5>
+                <ul class="mb-0">
+                    {% for document in expiring_soon %}
+                    <li>
+                        <a href="{{ url_for('documents.view_document', id=document.id) }}" class="text-decoration-none">
+                            {{ document.title or document.title_ar }}
+                        </a>
+                        - تنتهي في {{ document.days_until_expiry }} يوم
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+

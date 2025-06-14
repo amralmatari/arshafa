@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}اتصل بنا{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center mb-5">
+                <h1 class="display-4 text-primary mb-3">
+                    <i class="fas fa-envelope me-3"></i>
+                    اتصل بنا
+                </h1>
+                <p class="lead">نحن هنا لمساعدتك</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3 class="text-primary mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات الاتصال
+                            </h3>
+                            
+                            <div class="contact-info">
+                                <div class="mb-4">
+                                    <h5>
+                                        <i class="fas fa-user text-primary me-2"></i>
+                                        المطور
+                                    </h5>
+                                    <p class="mb-1">عمرو المطري</p>
+                                    <p class="text-muted">مطور نظام أرشفة</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h5>
+                                        <i class="fas fa-envelope text-primary me-2"></i>
+                                        البريد الإلكتروني
+                                    </h5>
+                                    <p>
+                                        <a href="mailto:support@arshafa.local" class="text-decoration-none">
+                                            support@arshafa.local
+                                        </a>
+                                    </p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h5>
+                                        <i class="fas fa-phone text-primary me-2"></i>
+                                        الهاتف
+                                    </h5>
+                                    <p>+966 XX XXX XXXX</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h5>
+                                        <i class="fas fa-clock text-primary me-2"></i>
+                                        ساعات العمل
+                                    </h5>
+                                    <p class="mb-1">الأحد - الخميس: 8:00 ص - 5:00 م</p>
+                                    <p class="text-muted">التوقيت المحلي (GMT+3)</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h5>
+                                        <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                        الموقع
+                                    </h5>
+                                    <p>المملكة العربية السعودية</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h3 class="text-primary mb-4">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                أرسل رسالة
+                            </h3>
+
+                            <form id="contactForm">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">الاسم *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">البريد الإلكتروني *</label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="subject" class="form-label">الموضوع *</label>
+                                    <select class="form-select" id="subject" name="subject" required>
+                                        <option value="">اختر الموضوع</option>
+                                        <option value="support">دعم فني</option>
+                                        <option value="bug">بلاغ عن خطأ</option>
+                                        <option value="feature">طلب ميزة جديدة</option>
+                                        <option value="question">سؤال عام</option>
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="message" class="form-label">الرسالة *</label>
+                                    <textarea class="form-control" id="message" name="message" rows="5" required 
+                                              placeholder="اكتب رسالتك هنا..."></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="privacy" name="privacy" required>
+                                        <label class="form-check-label" for="privacy">
+                                            أوافق على <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">سياسة الخصوصية</a>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    إرسال الرسالة
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="text-center text-primary mb-4">
+                <i class="fas fa-question-circle me-2"></i>
+                الأسئلة الشائعة
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="faq1">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse1" aria-expanded="false" aria-controls="collapse1">
+                            كيف يمكنني إعادة تعيين كلمة المرور؟
+                        </button>
+                    </h2>
+                    <div id="collapse1" class="accordion-collapse collapse" aria-labelledby="faq1" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            يمكنك إعادة تعيين كلمة المرور من خلال النقر على "نسيت كلمة المرور" في صفحة تسجيل الدخول، 
+                            أو التواصل مع مدير النظام.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="faq2">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2">
+                            ما هي أنواع الملفات المدعومة؟
+                        </button>
+                    </h2>
+                    <div id="collapse2" class="accordion-collapse collapse" aria-labelledby="faq2" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            النظام يدعم معظم أنواع الملفات الشائعة مثل PDF، Word، Excel، PowerPoint، 
+                            والصور (JPG، PNG، GIF)، والملفات المضغوطة (ZIP، RAR).
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="faq3">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse3" aria-expanded="false" aria-controls="collapse3">
+                            كيف يمكنني الحصول على صلاحيات إضافية؟
+                        </button>
+                    </h2>
+                    <div id="collapse3" class="accordion-collapse collapse" aria-labelledby="faq3" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            يجب التواصل مع مدير النظام لطلب صلاحيات إضافية. سيقوم المدير بمراجعة طلبك 
+                            وتحديد الصلاحيات المناسبة حسب دورك في المؤسسة.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="faq4">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse4" aria-expanded="false" aria-controls="collapse4">
+                            هل يمكنني الوصول للنظام من الهاتف المحمول؟
+                        </button>
+                    </h2>
+                    <div id="collapse4" class="accordion-collapse collapse" aria-labelledby="faq4" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            نعم، النظام مصمم ليكون متجاوباً ويعمل بشكل جيد على جميع الأجهزة 
+                            بما في ذلك الهواتف المحمولة والأجهزة اللوحية.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5>لم تجد ما تبحث عنه؟</h5>
+                    <p>تصفح دليل المساعدة الشامل للحصول على معلومات مفصلة.</p>
+                    <a href="{{ url_for('main.help') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-book me-2"></i>
+                        دليل المساعدة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Privacy Policy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="privacyModalLabel">سياسة الخصوصية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>جمع المعلومات</h6>
+                <p>نحن نجمع المعلومات التي تقدمها لنا عند استخدام النظام، بما في ذلك الاسم والبريد الإلكتروني.</p>
+                
+                <h6>استخدام المعلومات</h6>
+                <p>نستخدم المعلومات المجمعة لتحسين خدماتنا وتقديم الدعم الفني.</p>
+                
+                <h6>حماية المعلومات</h6>
+                <p>نحن ملتزمون بحماية معلوماتك الشخصية ولا نشاركها مع أطراف ثالثة دون موافقتك.</p>
+                
+                <h6>الاتصال</h6>
+                <p>إذا كان لديك أي أسئلة حول سياسة الخصوصية، يرجى التواصل معنا.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Show success message
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    this.insertAdjacentElement('afterend', alert);
+    this.reset();
+    
+    // Auto-hide alert after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+/* Arshafa Document Management System - Custom Styles */
+
+/* تنسيق عام */
+body {
+    font-family: 'Tajawal', sans-serif;
+    direction: rtl;
+    text-align: right;
+}
+
+/* تنسيق البطاقات */
+.card {
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-radius: 8px 8px 0 0 !important;
+}
+
+/* تنسيق الأزرار */
+.btn {
+    border-radius: 5px;
+    padding: 0.5rem 1rem;
+}
+
+/* تنسيق عناصر moment */
+.flask-moment {
+    direction: ltr;
+    display: inline-block;
+}
+
+/* تنسيق الجداول */
+.table th {
+    font-weight: bold;
+}
+
+/* تنسيق القوائم */
+.list-group-item {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0 !important;
+}
+
+/* تنسيق الشريط الجانبي */
+.sidebar {
+    position: sticky;
+    top: 20px;
+}
+
+
+

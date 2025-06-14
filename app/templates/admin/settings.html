@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}إعدادات النظام{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-cog me-2"></i>
+                    إعدادات النظام
+                </h2>
+                {% if request.args.get('from') == 'admin_dashboard' %}
+                <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة إلى لوحة التحكم
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- System Information -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات النظام
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>اسم النظام:</strong><br>
+                        <span class="text-muted">أرشفة - نظام إدارة الوثائق</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>الإصدار:</strong><br>
+                        <span class="text-muted">1.0.0</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>قاعدة البيانات:</strong><br>
+                        <span class="text-muted">SQLite</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>حالة النظام:</strong><br>
+                        <span class="badge bg-success">يعمل بشكل طبيعي</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Statistics -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        إحصائيات النظام
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>إجمالي المستخدمين:</strong><br>
+                        <span class="text-muted">{{ user_count if user_count is defined else 'غير متاح' }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>إجمالي الوثائق:</strong><br>
+                        <span class="text-muted">{{ document_count if document_count is defined else 'غير متاح' }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>إجمالي الفئات:</strong><br>
+                        <span class="text-muted">{{ category_count if category_count is defined else 'غير متاح' }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>آخر تحديث:</strong><br>
+                        <span class="text-muted">{{ moment().format('YYYY-MM-DD HH:mm') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        إعدادات الأمان
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>ملاحظة:</strong> إعدادات الأمان محمية ولا يمكن تعديلها إلا من خلال ملفات التكوين.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>تشفير كلمات المرور:</strong>
+                                <span class="badge bg-success ms-2">مفعل</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>نظام الأدوار والصلاحيات:</strong>
+                                <span class="badge bg-success ms-2">مفعل</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>تسجيل العمليات:</strong>
+                                <span class="badge bg-success ms-2">مفعل</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>حماية CSRF:</strong>
+                                <span class="badge bg-success ms-2">مفعل</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>جلسات آمنة:</strong>
+                                <span class="badge bg-success ms-2">مفعل</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>تشفير الملفات:</strong>
+                                <span class="badge bg-warning ms-2">اختياري</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>
+                        إجراءات النظام
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تحذير:</strong> هذه الإجراءات قد تؤثر على النظام بأكمله. يرجى التأكد قبل التنفيذ.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-database fa-3x text-info mb-3"></i>
+                                    <h6>نسخ احتياطي لقاعدة البيانات</h6>
+                                    <button class="btn btn-info btn-sm" onclick="alert('هذه الميزة قيد التطوير')">
+                                        إنشاء نسخة احتياطية
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-broom fa-3x text-warning mb-3"></i>
+                                    <h6>تنظيف السجلات القديمة</h6>
+                                    <button class="btn btn-warning btn-sm" onclick="alert('هذه الميزة قيد التطوير')">
+                                        تنظيف السجلات
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-sync fa-3x text-success mb-3"></i>
+                                    <h6>إعادة بناء الفهارس</h6>
+                                    <button class="btn btn-success btn-sm" onclick="alert('هذه الميزة قيد التطوير')">
+                                        إعادة البناء
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-link me-2"></i>
+                        روابط سريعة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-users me-2"></i>
+                                إدارة المستخدمين
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.roles') }}" class="btn btn-outline-success w-100 mb-2">
+                                <i class="fas fa-user-tag me-2"></i>
+                                إدارة الأدوار
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.list_logs') }}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="fas fa-history me-2"></i>
+                                سجل الأنشطة
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.list_categories') }}" class="btn btn-outline-warning w-100 mb-2">
+                                <i class="fas fa-folder me-2"></i>
+                                إدارة الفئات
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

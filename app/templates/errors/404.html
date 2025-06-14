@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% set title = "الصفحة غير موجودة" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-primary">404</h1>
+                <h2 class="mb-4">الصفحة غير موجودة</h2>
+                <p class="lead mb-4">
+                    عذراً، الصفحة التي تبحث عنها غير موجودة أو تم نقلها إلى موقع آخر.
+                </p>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary me-md-2">
+                        <i class="fas fa-home me-2"></i>
+                        العودة للصفحة الرئيسية
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة للصفحة السابقة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

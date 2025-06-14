@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل المستخدم - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-user-edit me-2"></i>
+                    تعديل المستخدم: {{ user.username }}
+                </h2>
+                <div>
+                    <a href="{{ url_for('admin.user_permissions', user_id=user.id) }}" class="btn btn-info me-2">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        إدارة الصلاحيات
+                    </a>
+                    <a href="{{ url_for('admin.list_users') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة لقائمة المستخدمين
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>
+                        تعديل بيانات المستخدم
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.edit_user', id=user.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    المعلومات الأساسية
+                                </h6>
+                                
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">اسم المستخدم</label>
+                                    <input type="text" class="form-control" id="username" name="username" 
+                                           value="{{ user.username }}" readonly>
+                                    <div class="form-text">لا يمكن تغيير اسم المستخدم</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">البريد الإلكتروني *</label>
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           value="{{ user.email }}" required maxlength="120">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">كلمة مرور جديدة</label>
+                                    <input type="password" class="form-control" id="password" name="password" 
+                                           minlength="6" placeholder="اتركه فارغاً إذا لم ترد تغيير كلمة المرور">
+                                    <div class="form-text">اتركه فارغاً للاحتفاظ بكلمة المرور الحالية</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">تأكيد كلمة المرور الجديدة</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                           minlength="6" placeholder="أعد إدخال كلمة المرور الجديدة">
+                                </div>
+                            </div>
+
+                            <!-- Personal Information -->
+                            <div class="col-md-6">
+                                <h6 class="text-info mb-3">
+                                    <i class="fas fa-user me-2"></i>
+                                    المعلومات الشخصية
+                                </h6>
+
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">الاسم الأول</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                                           value="{{ user.first_name or '' }}" maxlength="64">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">اسم العائلة</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                                           value="{{ user.last_name or '' }}" maxlength="64">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="department" class="form-label">القسم</label>
+                                    <input type="text" class="form-control" id="department" name="department" 
+                                           value="{{ user.department or '' }}" maxlength="64">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">رقم الهاتف</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ user.phone or '' }}" maxlength="20">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Role and Permissions -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-warning mb-3">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    الدور والصلاحيات
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="role_id" class="form-label">الدور *</label>
+                                            <select class="form-select" id="role_id" name="role_id" required
+                                                    {% if user.role and user.role.name == 'super_admin' %}disabled{% endif %}>
+                                                <option value="">اختر الدور</option>
+                                                {% for role in roles %}
+                                                    <option value="{{ role.id }}" 
+                                                            {% if user.role and user.role.id == role.id %}selected{% endif %}>
+                                                        {{ role.description }}
+                                                        {% if role.name == 'super_admin' %}
+                                                            (مدير النظام)
+                                                        {% elif role.name == 'admin' %}
+                                                            (مدير)
+                                                        {% elif role.name == 'manager' %}
+                                                            (مشرف)
+                                                        {% elif role.name == 'user' %}
+                                                            (مستخدم عادي)
+                                                        {% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            {% if user.role and user.role.name == 'super_admin' %}
+                                                <div class="form-text text-warning">لا يمكن تغيير دور مدير النظام</div>
+                                                <input type="hidden" name="role_id" value="{{ user.role.id }}">
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">حالة المستخدم</label>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="is_active" name="is_active" 
+                                                       {% if user.is_active %}checked{% endif %}
+                                                       {% if user.role and user.role.name == 'super_admin' %}disabled{% endif %}>
+                                                <label class="form-check-label" for="is_active">
+                                                    مستخدم نشط
+                                                </label>
+                                            </div>
+                                            {% if user.role and user.role.name == 'super_admin' %}
+                                                <div class="form-text text-warning">لا يمكن إلغاء تفعيل مدير النظام</div>
+                                                <input type="hidden" name="is_active" value="1">
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="is_admin" name="is_admin" 
+                                                       {% if user.is_admin %}checked{% endif %}
+                                                       {% if user.role and user.role.name == 'super_admin' %}disabled{% endif %}>
+                                                <label class="form-check-label" for="is_admin">
+                                                    صلاحيات إدارية إضافية
+                                                </label>
+                                            </div>
+                                            {% if user.role and user.role.name == 'super_admin' %}
+                                                <div class="form-text text-warning">مدير النظام لديه جميع الصلاحيات</div>
+                                                <input type="hidden" name="is_admin" value="1">
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-secondary mb-3">
+                                    <i class="fas fa-edit me-2"></i>
+                                    معلومات إضافية
+                                </h6>
+                                
+                                <div class="mb-3">
+                                    <label for="bio" class="form-label">نبذة شخصية</label>
+                                    <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.bio or '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Statistics -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-3">
+                                    <i class="fas fa-chart-bar me-2"></i>
+                                    إحصائيات المستخدم
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-primary">تاريخ الإنشاء</h6>
+                                            <p class="small">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-success">آخر تحديث</h6>
+                                            <p class="small">{{ user.updated_at.strftime('%Y-%m-%d') if user.updated_at else '-' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-info">آخر دخول</h6>
+                                            <p class="small">{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'لم يسجل دخول' }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h6 class="text-warning">آخر نشاط</h6>
+                                            <p class="small">{{ user.last_seen.strftime('%Y-%m-%d %H:%M') if user.last_seen else '-' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-save me-2"></i>
+                                            حفظ التغييرات
+                                        </button>
+                                        <a href="{{ url_for('admin.list_users') }}" 
+                                           class="btn btn-secondary btn-lg ms-2">
+                                            <i class="fas fa-times me-2"></i>
+                                            إلغاء
+                                        </a>
+                                    </div>
+                                    <div>
+                                        {% if user.role and user.role.name != 'super_admin' %}
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="confirmDelete()">
+                                                <i class="fas fa-trash me-2"></i>
+                                                حذف المستخدم
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    تأكيد الحذف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف المستخدم <strong>{{ user.username }}</strong>؟</p>
+                <p class="text-danger">
+                    <i class="fas fa-warning me-2"></i>
+                    هذا الإجراء لا يمكن التراجع عنه!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" action="{{ url_for('admin.delete_user', id=user.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>
+                        حذف نهائياً
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+
+    // Password confirmation validation
+    function validatePassword() {
+        if (password.value && password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity('كلمات المرور غير متطابقة');
+        } else {
+            confirmPassword.setCustomValidity('');
+        }
+    }
+
+    password.addEventListener('change', validatePassword);
+    confirmPassword.addEventListener('keyup', validatePassword);
+
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        // Check password match if password is being changed
+        if (password.value && password.value !== confirmPassword.value) {
+            e.preventDefault();
+            alert('كلمات المرور غير متطابقة');
+            confirmPassword.focus();
+            return false;
+        }
+
+        // Confirm changes
+        if (!confirm('هل أنت متأكد من حفظ التغييرات؟')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

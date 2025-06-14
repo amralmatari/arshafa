@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}الإحصائيات{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-chart-bar me-2"></i>
+                    الإحصائيات والتقارير
+                </h2>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="exportStatistics()">
+                        <i class="fas fa-download me-2"></i>
+                        تصدير التقرير
+                    </button>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة للوحة التحكم
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ total_documents or 0 }}</h4>
+                            <p class="card-text">إجمالي الوثائق</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ "%.1f"|format((storage_stats.total_size / 1024 / 1024) if storage_stats.total_size else 0) }} MB</h4>
+                            <p class="card-text">حجم التخزين</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-hdd fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ total_categories or 0 }}</h4>
+                            <p class="card-text">عدد الفئات</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-folder fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ active_users or 0 }}</h4>
+                            <p class="card-text">المستخدمون النشطون</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Statistics Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ total_users or 0 }}</h4>
+                            <p class="card-text">إجمالي المستخدمين</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-friends fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ storage_stats.total_files or 0 }}</h4>
+                            <p class="card-text">عدد الملفات</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-purple text-white" style="background-color: #6f42c1 !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ "%.1f"|format((storage_stats.avg_size / 1024) if storage_stats.avg_size else 0) }} KB</h4>
+                            <p class="card-text">متوسط حجم الملف</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-teal text-white" style="background-color: #20c997 !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ recent_activity_count or 0 }}</h4>
+                            <p class="card-text">الأنشطة الأسبوعية</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-history fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Documents by Month Chart -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        الوثائق حسب الشهر
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents by Category Chart -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        الوثائق حسب الفئة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents by Status Chart -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-doughnut me-2"></i>
+                        الوثائق حسب الحالة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Activity Chart -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        نشاط المستخدمين
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="userActivityChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Tables -->
+    <div class="row">
+        <!-- Category Statistics Table -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        إحصائيات الفئات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if doc_stats_category %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>الفئة</th>
+                                        <th>عدد الوثائق</th>
+                                        <th>النسبة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set total_docs = doc_stats_category|sum(attribute='count') %}
+                                    {% for category in doc_stats_category %}
+                                    <tr>
+                                        <td>{{ category.name_ar or category.name }}</td>
+                                        <td>{{ category.count }}</td>
+                                        <td>
+                                            {% if total_docs > 0 %}
+                                                {{ "%.1f"|format((category.count / total_docs) * 100) }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                            <p>لا توجد بيانات متاحة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- User Activity Table -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        نشاط المستخدمين
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user_activity %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>المستخدم</th>
+                                        <th>عدد الأنشطة</th>
+                                        <th>آخر نشاط</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity in user_activity %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user text-primary me-2"></i>
+                                                <div>
+                                                    <div class="fw-bold">{{ activity.username }}</div>
+                                                    <small class="text-muted">{{ activity.full_name or '-' }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ activity.activity_count }}</span>
+                                        </td>
+                                        <td>
+                                            {% if activity.last_activity %}
+                                                <small>{{ activity.last_activity.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <p>لا توجد بيانات متاحة</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Chart.js configuration
+Chart.defaults.font.family = 'Noto Sans Arabic, Arial, sans-serif';
+Chart.defaults.plugins.legend.rtl = true;
+
+// Monthly Documents Chart
+const monthlyData = {{ doc_stats_monthly|tojson if doc_stats_monthly else '[]' }};
+const monthlyLabels = monthlyData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
+const monthlyValues = monthlyData.map(item => item.count);
+
+const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(monthlyCtx, {
+    type: 'line',
+    data: {
+        labels: monthlyLabels,
+        datasets: [{
+            label: 'عدد الوثائق',
+            data: monthlyValues,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Category Documents Chart
+const categoryData = {{ doc_stats_category|tojson if doc_stats_category else '[]' }};
+const categoryLabels = categoryData.map(item => item.name_ar || item.name);
+const categoryValues = categoryData.map(item => item.count);
+
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: categoryLabels,
+        datasets: [{
+            data: categoryValues,
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF',
+                '#FF9F40',
+                '#FF6384',
+                '#C9CBCF'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Status Documents Chart
+const statusData = {{ doc_stats_status|tojson if doc_stats_status else '[]' }};
+const statusLabels = statusData.map(item => {
+    const statusMap = {
+        'DRAFT': 'مسودة',
+        'ACTIVE': 'نشط',
+        'ARCHIVED': 'مؤرشف',
+        'DELETED': 'محذوف'
+    };
+    return statusMap[item.status] || item.status;
+});
+const statusValues = statusData.map(item => item.count);
+
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: statusLabels,
+        datasets: [{
+            data: statusValues,
+            backgroundColor: [
+                '#FFC107',
+                '#28A745',
+                '#6C757D',
+                '#DC3545'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// User Activity Chart
+const userActivityData = {{ user_activity|tojson if user_activity else '[]' }};
+const userLabels = userActivityData.map(item => item.username);
+const userValues = userActivityData.map(item => item.activity_count);
+
+const userActivityCtx = document.getElementById('userActivityChart').getContext('2d');
+new Chart(userActivityCtx, {
+    type: 'bar',
+    data: {
+        labels: userLabels,
+        datasets: [{
+            label: 'عدد الأنشطة',
+            data: userValues,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+function exportStatistics() {
+    // This would typically generate and download a report
+    alert('سيتم تطوير ميزة تصدير التقارير قريباً');
+}
+</script>
+{% endblock %}

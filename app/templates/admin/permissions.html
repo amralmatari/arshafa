@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة الصلاحيات{% endblock %}
+
+{% block extra_css %}
+<style>
+.permissions-matrix {
+    font-size: 0.85rem;
+}
+
+.permissions-matrix th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.3rem 0.2rem !important;
+}
+
+.permissions-matrix td {
+    padding: 0.3rem 0.2rem !important;
+    vertical-align: middle;
+}
+
+.permissions-matrix .role-cell {
+    max-width: 120px;
+    overflow: hidden;
+}
+
+.btn-xs {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+    .permissions-matrix {
+        font-size: 0.75rem;
+    }
+
+    .permissions-matrix th,
+    .permissions-matrix td {
+        padding: 0.2rem 0.1rem !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-shield-alt me-2"></i>
+                    إدارة الصلاحيات
+                </h2>
+                <div>
+                    <a href="{{ url_for('admin.roles') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-user-tag me-2"></i>
+                        إدارة الأدوار
+                    </a>
+                    {% if request.args.get('from') == 'admin_dashboard' %}
+                    <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة إلى لوحة التحكم
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        نظرة عامة على الصلاحيات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ permissions|length }}</h4>
+                                <p class="mb-0">إجمالي الصلاحيات</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">{{ roles|length }}</h4>
+                                <p class="mb-0">إجمالي الأدوار</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">
+                                    {{ roles|selectattr('is_default')|list|length }}
+                                </h4>
+                                <p class="mb-0">الأدوار الافتراضية</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">
+                                    {{ roles|rejectattr('is_default')|list|length }}
+                                </h4>
+                                <p class="mb-0">الأدوار المخصصة</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Permissions List -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        قائمة الصلاحيات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if permissions %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>الصلاحية</th>
+                                        <th>الوصف</th>
+                                        <th>الأدوار</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for permission in permissions %}
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <strong class="text-primary">{{ translate_permission_name(permission.name) }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <code>{{ permission.name }}</code>
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong>{{ permission.description }}</strong>
+                                        </td>
+                                        <td>
+                                            {% set roles_with_permission = [] %}
+                                            {% for role in roles %}
+                                                {% if permission in role.permissions %}
+                                                    {% set _ = roles_with_permission.append(role) %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            
+                                            {% if roles_with_permission %}
+                                                {% for role in roles_with_permission %}
+                                                    <span class="badge bg-{{ 'warning' if role.name == 'super_admin' else 'secondary' }} me-1">
+                                                        {{ role.description }}
+                                                    </span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">غير مخصصة</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">لا توجد صلاحيات</h5>
+                            <p class="text-muted">لم يتم العثور على أي صلاحيات في النظام.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Roles and Permissions Matrix -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        مصفوفة الأدوار والصلاحيات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if roles and permissions %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-hover permissions-matrix">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th style="width: 35%; min-width: 120px;">الدور</th>
+                                        {% for permission in permissions[:8] %}
+                                            <th class="text-center px-1" style="width: 8%; min-width: 50px;"
+                                                title="{{ translate_permission_name(permission.name) }} - {{ permission.description }}">
+                                                <small>{{ translate_permission_name(permission.name).split(' ')[0] }}</small>
+                                            </th>
+                                        {% endfor %}
+                                        {% if permissions|length > 8 %}
+                                            <th class="text-center" style="width: 5%;">
+                                                <small>المزيد</small>
+                                            </th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for role in roles %}
+                                    <tr>
+                                        <td class="px-2 role-cell">
+                                            <div class="d-flex align-items-center">
+                                                {% if role.name == 'super_admin' %}
+                                                    <i class="fas fa-crown text-warning me-1" style="font-size: 0.8rem;"></i>
+                                                {% elif role.name == 'admin' %}
+                                                    <i class="fas fa-user-shield text-primary me-1" style="font-size: 0.8rem;"></i>
+                                                {% elif role.name == 'manager' %}
+                                                    <i class="fas fa-user-tie text-info me-1" style="font-size: 0.8rem;"></i>
+                                                {% else %}
+                                                    <i class="fas fa-user text-secondary me-1" style="font-size: 0.8rem;"></i>
+                                                {% endif %}
+                                                <div>
+                                                    <div class="fw-bold" style="font-size: 0.85rem;">{{ role.description }}</div>
+                                                    <small class="text-muted" style="font-size: 0.7rem;">{{ role.name }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {% for permission in permissions[:8] %}
+                                            <td class="text-center px-1 py-2">
+                                                {% if permission in role.permissions %}
+                                                    <i class="fas fa-check text-success" style="font-size: 0.8rem;"></i>
+                                                {% else %}
+                                                    <i class="fas fa-times text-danger" style="font-size: 0.8rem;"></i>
+                                                {% endif %}
+                                            </td>
+                                        {% endfor %}
+                                        {% if permissions|length > 8 %}
+                                            <td class="text-center px-1">
+                                                <a href="{{ url_for('admin.role_detail', role_id=role.id) }}"
+                                                   class="btn btn-xs btn-outline-primary p-1"
+                                                   title="عرض جميع الصلاحيات"
+                                                   style="font-size: 0.7rem;">
+                                                    <i class="fas fa-eye" style="font-size: 0.7rem;"></i>
+                                                </a>
+                                            </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                يتم عرض أول 8 صلاحيات فقط. انقر على أيقونة العين لرؤية جميع الصلاحيات.
+                            </small>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-table fa-3x text-muted mb-3"></i>
+                            <h6 class="text-muted">لا توجد بيانات</h6>
+                            <p class="text-muted small">لا توجد أدوار أو صلاحيات لعرضها.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permission Categories -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-layer-group me-2"></i>
+                        تصنيف الصلاحيات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% set permission_categories = {
+                            'documents': {
+                                'title': 'إدارة الوثائق',
+                                'icon': 'file-alt',
+                                'color': 'primary',
+                                'keywords': ['document', 'confidential']
+                            },
+                            'categories': {
+                                'title': 'إدارة الفئات',
+                                'icon': 'folder',
+                                'color': 'info',
+                                'keywords': ['categories']
+                            },
+                            'users': {
+                                'title': 'إدارة المستخدمين',
+                                'icon': 'users',
+                                'color': 'warning',
+                                'keywords': ['users', 'roles']
+                            },
+                            'system': {
+                                'title': 'إدارة النظام',
+                                'icon': 'cog',
+                                'color': 'danger',
+                                'keywords': ['system', 'audit', 'backup', 'restore']
+                            }
+                        } %}
+
+                        {% for category_key, category in permission_categories.items() %}
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="card border-{{ category.color }}">
+                                    <div class="card-header bg-{{ category.color }} text-white text-center">
+                                        <i class="fas fa-{{ category.icon }} fa-2x mb-2"></i>
+                                        <h6 class="mb-0">{{ category.title }}</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% set category_permissions = [] %}
+                                        {% for permission in permissions %}
+                                            {% set permission_added = false %}
+                                            {% for keyword in category.keywords %}
+                                                {% if keyword in permission.name and not permission_added %}
+                                                    {% set _ = category_permissions.append(permission) %}
+                                                    {% set permission_added = true %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endfor %}
+                                        
+                                        {% if category_permissions %}
+                                            <ul class="list-unstyled mb-0">
+                                                {% for permission in category_permissions %}
+                                                    <li class="mb-1">
+                                                        <small>
+                                                            <i class="fas fa-check text-{{ category.color }} me-1"></i>
+                                                            {{ permission.description }}
+                                                        </small>
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p class="text-muted small mb-0">لا توجد صلاحيات في هذه الفئة</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        إجراءات سريعة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.roles') }}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-user-tag me-2"></i>
+                                عرض جميع الأدوار
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-success w-100 mb-2">
+                                <i class="fas fa-users me-2"></i>
+                                إدارة المستخدمين
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.list_logs') }}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="fas fa-history me-2"></i>
+                                سجل الأنشطة
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-secondary w-100 mb-2">
+                                <i class="fas fa-cog me-2"></i>
+                                إعدادات النظام
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

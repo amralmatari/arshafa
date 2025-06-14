@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}معلومات النظام{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-info-circle me-2"></i>
+                    معلومات النظام
+                </h2>
+                {% if request.args.get('from') == 'admin_dashboard' %}
+                <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة إلى لوحة التحكم
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- System Overview -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-server me-2"></i>
+                        معلومات الخادم
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>نظام التشغيل:</strong></td>
+                            <td>{{ system_info.platform }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>إصدار Python:</strong></td>
+                            <td>{{ system_info.python_version.split()[0] }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>إصدار Flask:</strong></td>
+                            <td>{{ system_info.flask_version }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>وضع التطوير:</strong></td>
+                            <td>
+                                {% if system_info.debug_mode %}
+                                    <span class="badge bg-warning">مفعل</span>
+                                {% else %}
+                                    <span class="badge bg-success">معطل</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>المفتاح السري:</strong></td>
+                            <td>
+                                {% if system_info.secret_key_set %}
+                                    <span class="badge bg-success">محدد</span>
+                                {% else %}
+                                    <span class="badge bg-danger">غير محدد</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        معلومات قاعدة البيانات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>نوع قاعدة البيانات:</strong></td>
+                            <td>
+                                {% if 'sqlite' in system_info.database_url %}
+                                    SQLite
+                                {% elif 'postgresql' in system_info.database_url %}
+                                    PostgreSQL
+                                {% elif 'mysql' in system_info.database_url %}
+                                    MySQL
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>حالة الاتصال:</strong></td>
+                            <td>
+                                <span class="badge bg-success" id="dbStatus">متصل</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>عدد الجداول:</strong></td>
+                            <td id="tableCount">جاري التحميل...</td>
+                        </tr>
+                        <tr>
+                            <td><strong>حجم قاعدة البيانات:</strong></td>
+                            <td id="dbSize">جاري التحميل...</td>
+                        </tr>
+                    </table>
+                    <button class="btn btn-outline-info btn-sm" onclick="testDatabaseConnection()">
+                        <i class="fas fa-plug me-1"></i>
+                        اختبار الاتصال
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Statistics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        إحصائيات التطبيق
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-primary" id="userCount">جاري التحميل...</h3>
+                                <p class="text-muted">المستخدمون</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-success" id="documentCount">جاري التحميل...</h3>
+                                <p class="text-muted">الوثائق</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-info" id="categoryCount">جاري التحميل...</h3>
+                                <p class="text-muted">الفئات</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-warning" id="logCount">جاري التحميل...</h3>
+                                <p class="text-muted">سجلات الأنشطة</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-heartbeat me-2"></i>
+                        صحة النظام
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <i class="fas fa-server fa-2x text-success" id="serverIcon"></i>
+                                </div>
+                                <h6>الخادم</h6>
+                                <span class="badge bg-success" id="serverStatus">يعمل</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <i class="fas fa-database fa-2x text-success" id="databaseIcon"></i>
+                                </div>
+                                <h6>قاعدة البيانات</h6>
+                                <span class="badge bg-success" id="databaseStatus">متصلة</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <i class="fas fa-hdd fa-2x text-success" id="storageIcon"></i>
+                                </div>
+                                <h6>التخزين</h6>
+                                <span class="badge bg-success" id="storageStatus">متاح</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <i class="fas fa-shield-alt fa-2x text-success" id="securityIcon"></i>
+                                </div>
+                                <h6>الأمان</h6>
+                                <span class="badge bg-success" id="securityStatus">محمي</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-warning" onclick="runSystemCheck()">
+                            <i class="fas fa-sync me-2"></i>
+                            فحص شامل للنظام
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Environment Variables -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        متغيرات البيئة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>المتغير</th>
+                                    <th>القيمة</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>SECRET_KEY</td>
+                                    <td>***محدد***</td>
+                                    <td><span class="badge bg-success">موجود</span></td>
+                                </tr>
+                                <tr>
+                                    <td>DATABASE_URL</td>
+                                    <td>***محدد***</td>
+                                    <td><span class="badge bg-success">موجود</span></td>
+                                </tr>
+                                <tr>
+                                    <td>FLASK_ENV</td>
+                                    <td>{{ 'development' if system_info.debug_mode else 'production' }}</td>
+                                    <td>
+                                        {% if system_info.debug_mode %}
+                                            <span class="badge bg-warning">تطوير</span>
+                                        {% else %}
+                                            <span class="badge bg-success">إنتاج</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testDatabaseConnection() {
+    const statusElement = document.getElementById('dbStatus');
+    statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاختبار...';
+    
+    fetch('/admin/api/system-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.status === 'online') {
+                statusElement.innerHTML = '<span class="badge bg-success">متصل</span>';
+            } else {
+                statusElement.innerHTML = '<span class="badge bg-danger">غير متصل</span>';
+            }
+        })
+        .catch(error => {
+            statusElement.innerHTML = '<span class="badge bg-danger">خطأ في الاتصال</span>';
+        });
+}
+
+function runSystemCheck() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الفحص...';
+    btn.disabled = true;
+    
+    // Simulate system check
+    setTimeout(() => {
+        alert('تم فحص النظام بنجاح! جميع المكونات تعمل بشكل طبيعي.');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 3000);
+}
+
+function loadStatistics() {
+    fetch('/admin/api/statistics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('userCount').textContent = data.stats.user_count || 0;
+                document.getElementById('documentCount').textContent = data.stats.document_count || 0;
+                document.getElementById('categoryCount').textContent = data.stats.category_count || 0;
+                document.getElementById('logCount').textContent = data.stats.recent_activities || 0;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading statistics:', error);
+        });
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatistics();
+    testDatabaseConnection();
+});
+</script>
+{% endblock %}

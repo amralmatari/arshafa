@@ -1,0 +1,375 @@
+
+{% extends "base.html" %}
+{% set title = document.title %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Document Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">
+            <i class="fas fa-file-alt me-2"></i>
+            {{ document.title }}
+        </h1>
+        <div>
+            <a href="{{ url_for('documents.list_documents') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>
+                العودة للقائمة
+            </a>
+            {% if current_user.can('edit_document') or current_user.id == document.author_id %}
+            <a href="{{ url_for('documents.edit_document', id=document.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>
+                تعديل
+            </a>
+            {% endif %}
+            <a href="{{ url_for('documents.download_document', id=document.id) }}" class="btn btn-success">
+                <i class="fas fa-download me-1"></i>
+                تنزيل
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Document Details -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        تفاصيل الوثيقة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if document.description %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">الوصف:</h6>
+                        <p>{{ document.description }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if document.original_filename %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">اسم الملف الأصلي:</h6>
+                        <p class="text-muted">
+                            <i class="fas fa-file me-2"></i>
+                            {{ document.original_filename }}
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <strong>الفئة</strong>
+                                <div class="text-end">
+                                    {% if document.category %}
+                                        <span class="text-muted small">{{ document.category.get_full_path() }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">غير مصنف</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            نوع الملف
+                            <span class="badge bg-info">{{ document.file_type|file_type_display }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            الحالة
+                            <span class="badge bg-{{ document.get_status_color() }}">
+                                {{ document.status|document_status }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            تاريخ الإنشاء
+                            <span>
+                                {% if document.created_at %}
+                                    {{ document.created_at.strftime('%Y/%m/%d %H:%M') }}
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            آخر تحديث
+                            <span>
+                                {% if document.updated_at %}
+                                    {{ document.updated_at.strftime('%Y/%m/%d %H:%M') }}
+                                {% else %}
+                                    غير محدد
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            بواسطة
+                            <span>{{ document.author.get_full_name() }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            عدد المشاهدات
+                            <span class="badge bg-info">{{ document.view_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            عدد التنزيلات
+                            <span class="badge bg-info">{{ document.download_count }}</span>
+                        </li>
+                        {% if pdf_info and document.file_type == 'pdf' %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            عدد الصفحات
+                            <span class="badge bg-secondary">{{ pdf_info.pages }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            حجم الملف
+                            <span class="badge bg-secondary">{{ pdf_info.size_mb }} ميجابايت</span>
+                        </li>
+                        {% endif %}
+                        {% if document.is_confidential %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-danger">
+                                <i class="fas fa-lock me-1"></i>
+                                وثيقة سرية
+                            </span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+
+
+            <!-- Document Versions -->
+            {% if versions %}
+            <div class="card mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        إصدارات الوثيقة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم الإصدار</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>بواسطة</th>
+                                    <th>ملاحظات</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for version in versions %}
+                                <tr>
+                                    <td>{{ version.version_number }}</td>
+                                    <td>{{ version.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                                    <td>{{ version.created_by.get_full_name() if version.created_by else 'غير معروف' }}</td>
+                                    <td>{{ version.comment or '-' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('documents.download_version', id=version.id) }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-download"></i>
+                                            تنزيل
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Related Documents -->
+            {% if related_documents %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-link me-2"></i>
+                        وثائق ذات صلة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for related in related_documents %}
+                        <a href="{{ url_for('documents.view_document', id=related.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ related.title }}</h6>
+                                <small>{{ related.created_at.strftime('%Y/%m/%d') }}</small>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>
+                                {{ related.author.get_full_name() }}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Document Actions -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        إجراءات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('documents.download_document', id=document.id) }}" class="btn btn-success">
+                            <i class="fas fa-download me-1"></i>
+                            تنزيل الوثيقة
+                        </a>
+                        {% if current_user.can('edit_document') or current_user.id == document.author_id %}
+                        <a href="{{ url_for('documents.edit_document', id=document.id) }}" class="btn btn-primary">
+                            <i class="fas fa-edit me-1"></i>
+                            تعديل الوثيقة
+                        </a>
+                        {% endif %}
+                        {% if current_user.can('delete_document') or current_user.id == document.author_id %}
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDocumentModal">
+                            <i class="fas fa-trash me-1"></i>
+                            حذف الوثيقة
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Preview (Small) -->
+            {% if document.file_type in ['pdf', 'jpg', 'jpeg', 'png', 'gif'] %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>
+                        معاينة سريعة
+                        {% if pdf_info and document.file_type == 'pdf' %}
+                        <small class="ms-2">({{ pdf_info.pages }} صفحة)</small>
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body p-2">
+                    {% if document.file_type in ['jpg', 'jpeg', 'png', 'gif'] %}
+                    <img src="{{ url_for('documents.preview_document', id=document.id) }}" class="img-fluid" alt="{{ document.title }}" style="max-height: 200px; width: 100%; object-fit: contain;">
+                    {% elif document.file_type == 'pdf' %}
+                    <div class="pdf-preview-small" style="height: 300px; width: 100%;">
+                        <div class="d-flex align-items-center justify-content-center h-100"
+                             style="border: 1px solid #dee2e6; border-radius: 4px; background-color: #f8f9fa;">
+                            <div class="text-center">
+                                <img src="{{ url_for('documents.pdf_thumbnail', id=document.id) }}"
+                                     alt="PDF Thumbnail"
+                                     style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                                <br>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-file-pdf me-1 text-danger"></i>
+                                    ملف PDF ({{ pdf_info.pages if pdf_info else '?' }} صفحة)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <a href="{{ url_for('documents.download_document', id=document.id) }}"
+                           class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-download me-1"></i>
+                            تنزيل الملف
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Document Modal -->
+{% if current_user.can('delete_document') or current_user.id == document.author_id %}
+<div class="modal fade" id="deleteDocumentModal" tabindex="-1" aria-labelledby="deleteDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteDocumentModalLabel">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                هل أنت متأكد من رغبتك في حذف هذه الوثيقة؟ هذا الإجراء لا يمكن التراجع عنه.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{{ url_for('documents.delete_document', id=document.id) }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">تأكيد الحذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block head %}
+<style>
+    .pdf-preview-small {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #f8f9fa;
+    }
+
+    .pdf-preview-small iframe {
+        display: block;
+    }
+
+    #pdf-placeholder {
+        transition: all 0.3s ease;
+    }
+
+    #pdf-placeholder:hover {
+        background-color: #e9ecef !important;
+        border-color: #adb5bd !important;
+    }
+
+    @media (max-width: 768px) {
+        .pdf-preview-small {
+            height: 200px !important;
+        }
+    }
+
+    .card-header h6 {
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function handleIframeLoad() {
+        console.log("PDF iframe loaded successfully");
+    }
+
+
+
+    $(document).ready(function() {
+        console.log("Document view page loaded");
+
+        // Prevent any automatic downloads
+        $('a[href*="/preview/"]').on('click', function(e) {
+            const href = $(this).attr('href');
+            if (href && href.includes('.pdf')) {
+                e.preventDefault();
+                console.log('Prevented potential PDF download');
+                return false;
+            }
+        });
+
+        // No iframe handling needed anymore since we use static thumbnail
+    });
+</script>
+{% endblock %}
+
+
+
+

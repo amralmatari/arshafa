@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% set title = "إضافة وثيقة جديدة" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        إضافة وثيقة جديدة
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form id="document-form" method="POST" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">عنوان الوثيقة *</label>
+                            {{ form.title(class="form-control", id="title", required=true) }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">وصف الوثيقة</label>
+                            {{ form.description(class="form-control", id="description", rows="3") }}
+                        </div>
+                        
+                        <!-- نظام الفئات الهرمي -->
+                        <div class="mb-3">
+                            <label class="form-label">اختيار الفئة</label>
+
+                            <!-- الفئة الرئيسية -->
+                            <div class="mb-2">
+                                <label for="main_category_id" class="form-label text-muted small">الفئة الرئيسية</label>
+                                {{ form.main_category_id(class="form-select", id="main_category_id") }}
+                            </div>
+
+                            <!-- الفئة الفرعية الأولى -->
+                            <div class="mb-2" id="sub_category_1_container" style="display: none;">
+                                <label for="sub_category_1_id" class="form-label text-muted small">الفئة الفرعية الأولى</label>
+                                {{ form.sub_category_1_id(class="form-select", id="sub_category_1_id") }}
+                            </div>
+
+                            <!-- الفئة الفرعية الثانية -->
+                            <div class="mb-2" id="sub_category_2_container" style="display: none;">
+                                <label for="sub_category_2_id" class="form-label text-muted small">الفئة الفرعية الثانية</label>
+                                {{ form.sub_category_2_id(class="form-select", id="sub_category_2_id") }}
+                            </div>
+
+                            <!-- الفئة الفرعية الثالثة -->
+                            <div class="mb-2" id="sub_category_3_container" style="display: none;">
+                                <label for="sub_category_3_id" class="form-label text-muted small">الفئة الفرعية الثالثة</label>
+                                {{ form.sub_category_3_id(class="form-select", id="sub_category_3_id") }}
+                            </div>
+
+                            <!-- الحقل المخفي للفئة النهائية -->
+                            {{ form.category_id(style="display: none;", id="category_id") }}
+
+                            <!-- عرض الفئة المختارة -->
+                            <div id="selected_category_display" class="mt-2" style="display: none;">
+                                <small class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    الفئة المختارة: <span id="selected_category_name"></span>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- حذف حقل العلامات -->
+                        
+                        <div class="mb-3">
+                            <label for="document_file" class="form-label">ملف الوثيقة *</label>
+                            {{ form.document_file(class="form-control", id="document_file", required=true) }}
+                            <div class="form-text">الملفات المدعومة: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="status" class="form-label">الحالة</label>
+                            {{ form.status(class="form-select", id="status") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="expiry_date" class="form-label">تاريخ انتهاء الصلاحية</label>
+                            {{ form.expiry_date(class="form-control", id="expiry_date") }}
+                            <div class="form-text">اتركه فارغًا إذا كانت الوثيقة لا تنتهي صلاحيتها</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_confidential(class="form-check-input", id="is_confidential") }}
+                                <label class="form-check-label" for="is_confidential">
+                                    وثيقة سرية
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('documents.list_documents') }}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i>
+                                إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                حفظ الوثيقة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // حذف تهيئة Select2 للعلامات
+        // $('#tags').select2({
+        //     placeholder: 'اختر العلامات',
+        //     allowClear: true,
+        //     dir: 'rtl',
+        //     language: 'ar',
+        //     width: '100%'
+        // });
+
+        console.log("Document create form initialized");
+
+        // Handle form submission
+        $('#document-form').on('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var formData = new FormData(this);
+            var submitBtn = $(this).find('button[type="submit"]');
+            var originalText = submitBtn.html();
+
+            // Show loading state
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...');
+
+            $.ajax({
+                url: $(this).attr('action') || window.location.pathname,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response, textStatus, xhr) {
+                    // Check if response is a redirect
+                    if (xhr.getResponseHeader('Location') || response.redirect) {
+                        var redirectUrl = xhr.getResponseHeader('Location') || response.redirect;
+                        // Prevent PDF downloads
+                        if (redirectUrl && !redirectUrl.includes('/download/') && !redirectUrl.includes('.pdf')) {
+                            window.location.replace(redirectUrl);
+                        } else {
+                            console.log('Prevented potential download redirect:', redirectUrl);
+                            alert('تم إنشاء الوثيقة بنجاح');
+                            window.location.replace('/documents/list');
+                        }
+                    } else if (response.success) {
+                        // Handle JSON success response
+                        if (response.redirect_url) {
+                            window.location.replace(response.redirect_url);
+                        } else {
+                            // Show success message and reload
+                            alert('تم إنشاء الوثيقة بنجاح');
+                            window.location.reload();
+                        }
+                    } else {
+                        // Handle errors
+                        alert('حدث خطأ أثناء إنشاء الوثيقة');
+                        submitBtn.prop('disabled', false).html(originalText);
+                    }
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    console.error('Form submission error:', errorThrown);
+                    alert('حدث خطأ أثناء إنشاء الوثيقة');
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            });
+
+            return false; // Prevent default form submission
+        });
+
+        // نظام الفئات الهرمي
+        function updateCategorySelection() {
+            var mainCategoryId = $('#main_category_id').val();
+            var subCategory1Id = $('#sub_category_1_id').val();
+            var subCategory2Id = $('#sub_category_2_id').val();
+            var subCategory3Id = $('#sub_category_3_id').val();
+
+            var finalCategoryId = 0;
+            var categoryPath = [];
+
+            if (mainCategoryId && mainCategoryId != '0') {
+                categoryPath.push($('#main_category_id option:selected').text());
+                finalCategoryId = mainCategoryId;
+
+                if (subCategory1Id && subCategory1Id != '0') {
+                    categoryPath.push($('#sub_category_1_id option:selected').text());
+                    finalCategoryId = subCategory1Id;
+
+                    if (subCategory2Id && subCategory2Id != '0') {
+                        categoryPath.push($('#sub_category_2_id option:selected').text());
+                        finalCategoryId = subCategory2Id;
+
+                        if (subCategory3Id && subCategory3Id != '0') {
+                            categoryPath.push($('#sub_category_3_id option:selected').text());
+                            finalCategoryId = subCategory3Id;
+                        }
+                    }
+                }
+            }
+
+            // تحديث الحقل المخفي
+            $('#category_id').val(finalCategoryId);
+
+            // عرض الفئة المختارة
+            if (categoryPath.length > 0) {
+                $('#selected_category_name').text(categoryPath.join(' ← '));
+                $('#selected_category_display').show();
+            } else {
+                $('#selected_category_display').hide();
+            }
+        }
+
+        function loadSubcategories(parentId, targetSelectId, containerSelector) {
+            if (parentId && parentId != '0') {
+                $.get('/documents/api/subcategories/' + parentId)
+                    .done(function(data) {
+                        var select = $(targetSelectId);
+                        select.empty();
+
+                        if (data.length > 0) {
+                            select.append('<option value="0">-- اختر الفئة الفرعية --</option>');
+                            $.each(data, function(index, category) {
+                                select.append('<option value="' + category.id + '">' + category.name + '</option>');
+                            });
+                            $(containerSelector).show();
+                        } else {
+                            $(containerSelector).hide();
+                        }
+                    })
+                    .fail(function() {
+                        console.error('فشل في تحميل الفئات الفرعية');
+                        $(containerSelector).hide();
+                    });
+            } else {
+                $(containerSelector).hide();
+                $(targetSelectId).empty().append('<option value="0">-- اختر الفئة الفرعية --</option>');
+            }
+        }
+
+        // أحداث تغيير القوائم المنسدلة
+        $('#main_category_id').change(function() {
+            var selectedId = $(this).val();
+
+            // إخفاء وإعادة تعيين الفئات الفرعية
+            $('#sub_category_1_container, #sub_category_2_container, #sub_category_3_container').hide();
+            $('#sub_category_1_id, #sub_category_2_id, #sub_category_3_id').val('0');
+
+            // تحميل الفئات الفرعية من المستوى الأول
+            loadSubcategories(selectedId, '#sub_category_1_id', '#sub_category_1_container');
+
+            updateCategorySelection();
+        });
+
+        $('#sub_category_1_id').change(function() {
+            var selectedId = $(this).val();
+
+            // إخفاء وإعادة تعيين الفئات الفرعية من المستوى الثاني والثالث
+            $('#sub_category_2_container, #sub_category_3_container').hide();
+            $('#sub_category_2_id, #sub_category_3_id').val('0');
+
+            // تحميل الفئات الفرعية من المستوى الثاني
+            loadSubcategories(selectedId, '#sub_category_2_id', '#sub_category_2_container');
+
+            updateCategorySelection();
+        });
+
+        $('#sub_category_2_id').change(function() {
+            var selectedId = $(this).val();
+
+            // إخفاء وإعادة تعيين الفئات الفرعية من المستوى الثالث
+            $('#sub_category_3_container').hide();
+            $('#sub_category_3_id').val('0');
+
+            // تحميل الفئات الفرعية من المستوى الثالث
+            loadSubcategories(selectedId, '#sub_category_3_id', '#sub_category_3_container');
+
+            updateCategorySelection();
+        });
+
+        $('#sub_category_3_id').change(function() {
+            updateCategorySelection();
+        });
+
+        // تحديث الاختيار عند تحميل الصفحة
+        updateCategorySelection();
+    });
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+

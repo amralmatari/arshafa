@@ -1,0 +1,748 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة تحكم المدير{% endblock %}
+
+{% block head %}
+<style>
+.admin-card {
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.admin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.quick-action-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-action-card:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.02);
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.status-online { background-color: #28a745; }
+.status-warning { background-color: #ffc107; }
+.status-offline { background-color: #dc3545; }
+
+.admin-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 10px;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.section-header {
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.section-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 50px;
+    height: 2px;
+    background: linear-gradient(90deg, #007bff, #6f42c1);
+}
+
+.section-divider {
+    margin: 2rem 0;
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #dee2e6, transparent);
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Admin Header -->
+    <div class="admin-header text-center">
+        <div class="container">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-shield-alt me-3"></i>
+                لوحة تحكم المدير
+            </h1>
+            <p class="lead mb-0">
+                مرحباً {{ current_user.get_full_name() }} - إدارة شاملة لنظام أرشفة
+            </p>
+            <div class="mt-3">
+                <span class="badge bg-light text-dark me-2">
+                    <i class="fas fa-user me-1"></i>
+                    {{ current_user.role.description if current_user.role else 'مستخدم' }}
+                </span>
+                <span class="badge bg-light text-dark">
+                    <i class="fas fa-clock me-1"></i>
+                    آخر دخول: {{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else 'أول مرة' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card admin-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="text-primary mb-1">{{ user_count or 0 }}</h2>
+                        <p class="text-muted mb-0">إجمالي المستخدمين</p>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up me-1"></i>
+                            +{{ (user_count or 0) - (active_users or 0) }} غير نشط
+                        </small>
+                    </div>
+                    <div class="text-primary">
+                        <i class="fas fa-users fa-3x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('admin.list_users', from='admin_dashboard') }}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>عرض التفاصيل
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card admin-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="text-success mb-1">{{ active_users or 0 }}</h2>
+                        <p class="text-muted mb-0">المستخدمون النشطون</p>
+                        <small class="text-info">
+                            <i class="fas fa-percentage me-1"></i>
+                            {{ "%.1f"|format(((active_users or 0) / (user_count or 1)) * 100) }}% من الإجمالي
+                        </small>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-user-check fa-3x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('admin.list_users', from='admin_dashboard') }}?status=active" class="btn btn-outline-success btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>عرض النشطين
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card admin-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="text-info mb-1">{{ category_count or 0 }}</h2>
+                        <p class="text-muted mb-0">فئات الوثائق</p>
+                        <small class="text-warning">
+                            <i class="fas fa-folder-open me-1"></i>
+                            {{ document_count or 0 }} وثيقة
+                        </small>
+                    </div>
+                    <div class="text-info">
+                        <i class="fas fa-folder fa-3x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('admin.list_categories', from='admin_dashboard') }}" class="btn btn-outline-info btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>إدارة الفئات
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card admin-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="text-warning mb-1">{{ recent_activities or 0 }}</h2>
+                        <p class="text-muted mb-0">الأنشطة اليوم</p>
+                        <small class="text-secondary">
+                            <i class="fas fa-clock me-1"></i>
+                            آخر نشاط منذ دقائق
+                        </small>
+                    </div>
+                    <div class="text-warning">
+                        <i class="fas fa-history fa-3x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('admin.list_logs', from='admin_dashboard') }}" class="btn btn-outline-warning btn-sm w-100">
+                        <i class="fas fa-eye me-1"></i>سجل الأنشطة
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Grid -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-4">
+                <i class="fas fa-bolt me-2 text-primary"></i>
+                الإجراءات السريعة
+            </h3>
+        </div>
+
+        <!-- الصف الأول: إدارة المستخدمين والأدوار -->
+        <div class="col-12">
+            <h5 class="section-header text-primary">
+                <i class="fas fa-users me-2"></i>
+                إدارة المستخدمين والأدوار
+            </h5>
+        </div>
+
+        {% if current_user.can('manage_users') %}
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.create_user', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-plus fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">إضافة مستخدم</h5>
+                    <p class="card-text text-muted">إنشاء حساب مستخدم جديد</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.list_users', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">إدارة المستخدمين</h5>
+                    <p class="card-text text-muted">عرض وتعديل المستخدمين</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.roles', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-tag fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">إدارة الأدوار</h5>
+                    <p class="card-text text-muted">تعديل الأدوار والصلاحيات</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.permissions', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-shield-alt fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">إدارة الصلاحيات</h5>
+                    <p class="card-text text-muted">عرض وتعديل الصلاحيات</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- فاصل بين الأقسام -->
+        <div class="col-12">
+            <hr class="section-divider">
+        </div>
+
+        <!-- الصف الثاني: إدارة المحتوى والوثائق -->
+        <div class="col-12">
+            <h5 class="section-header text-success">
+                <i class="fas fa-folder me-2"></i>
+                إدارة المحتوى والوثائق
+            </h5>
+        </div>
+
+        {% if current_user.can('manage_categories') %}
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.list_categories', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-folder fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">إدارة الفئات</h5>
+                    <p class="card-text text-muted">عرض وتنظيم الفئات</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.create_category', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-folder-plus fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">إضافة فئة</h5>
+                    <p class="card-text text-muted">إنشاء فئة وثائق جديدة</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('documents.list_documents') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-file-alt fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">إدارة الوثائق</h5>
+                    <p class="card-text text-muted">عرض جميع الوثائق</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('documents.create_document') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-file-plus fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">رفع وثيقة</h5>
+                    <p class="card-text text-muted">إضافة وثيقة جديدة</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- فاصل بين الأقسام -->
+        <div class="col-12">
+            <hr class="section-divider">
+        </div>
+
+        <!-- الصف الثالث: إدارة النظام والمراقبة -->
+        <div class="col-12">
+            <h5 class="section-header text-warning">
+                <i class="fas fa-cogs me-2"></i>
+                إدارة النظام والمراقبة
+            </h5>
+        </div>
+
+        {% if current_user.can('manage_system') %}
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.settings', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-cog fa-3x text-secondary"></i>
+                    </div>
+                    <h5 class="card-title">إعدادات النظام</h5>
+                    <p class="card-text text-muted">تكوين النظام العام</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.system_info', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-info-circle fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">معلومات النظام</h5>
+                    <p class="card-text text-muted">عرض حالة النظام</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.backup', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-download fa-3x text-danger"></i>
+                    </div>
+                    <h5 class="card-title">النسخ الاحتياطي</h5>
+                    <p class="card-text text-muted">إنشاء نسخة احتياطية</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.can('view_audit_logs') %}
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.list_logs', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-history fa-3x text-dark"></i>
+                    </div>
+                    <h5 class="card-title">سجل الأنشطة</h5>
+                    <p class="card-text text-muted">مراقبة أنشطة النظام</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- فاصل بين الأقسام -->
+        <div class="col-12">
+            <hr class="section-divider">
+        </div>
+
+        <!-- الصف الرابع: التقارير والإحصائيات -->
+        <div class="col-12">
+            <h5 class="section-header text-purple">
+                <i class="fas fa-chart-bar me-2"></i>
+                التقارير والإحصائيات
+            </h5>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('main.statistics') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-chart-pie fa-3x text-purple"></i>
+                    </div>
+                    <h5 class="card-title">الإحصائيات</h5>
+                    <p class="card-text text-muted">تقارير وإحصائيات مفصلة</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.performance_reports', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-chart-line fa-3x text-success"></i>
+                    </div>
+                    <h5 class="card-title">تقارير الأداء</h5>
+                    <p class="card-text text-muted">مراقبة أداء النظام</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.data_analytics', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-chart-area fa-3x text-warning"></i>
+                    </div>
+                    <h5 class="card-title">تحليل البيانات</h5>
+                    <p class="card-text text-muted">تحليل استخدام النظام</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card quick-action-card admin-card h-100" onclick="location.href='{{ url_for('admin.export_reports', from='admin_dashboard') }}'">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-file-export fa-3x text-info"></i>
+                    </div>
+                    <h5 class="card-title">تصدير التقارير</h5>
+                    <p class="card-text text-muted">تصدير البيانات والتقارير</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Management Sections -->
+        <div class="col-lg-4 mb-4">
+            <div class="card admin-card h-100">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        إدارة المستخدمين
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% if current_user.can('manage_users') %}
+                        <a href="{{ url_for('admin.list_users', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-users text-primary me-2"></i>
+                                    قائمة المستخدمين
+                                </div>
+                                <span class="badge bg-primary">{{ user_count or 0 }}</span>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('admin.create_user', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-user-plus text-success me-2"></i>
+                            إضافة مستخدم جديد
+                        </a>
+                        <a href="{{ url_for('admin.roles', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-user-tag text-warning me-2"></i>
+                            إدارة الأدوار والصلاحيات
+                        </a>
+                        <a href="{{ url_for('admin.permissions', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-shield-alt text-info me-2"></i>
+                            عرض الصلاحيات
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Management -->
+        <div class="col-lg-4 mb-4">
+            <div class="card admin-card h-100">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-folder me-2"></i>
+                        إدارة المحتوى
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% if current_user.can('manage_categories') %}
+                        <a href="{{ url_for('admin.list_categories', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-folder text-info me-2"></i>
+                                    إدارة الفئات
+                                </div>
+                                <span class="badge bg-info">{{ category_count or 0 }}</span>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('admin.create_category', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-folder-plus text-success me-2"></i>
+                            إضافة فئة جديدة
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('documents.list_documents') }}" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                    جميع الوثائق
+                                </div>
+                                <span class="badge bg-primary">{{ document_count or 0 }}</span>
+                            </div>
+                        </a>
+                        <a href="{{ url_for('documents.create_document') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-upload text-warning me-2"></i>
+                            رفع وثيقة جديدة
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Management -->
+        <div class="col-lg-4 mb-4">
+            <div class="card admin-card h-100">
+                <div class="card-header bg-gradient-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        إدارة النظام
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% if current_user.can('manage_system') %}
+                        <a href="{{ url_for('admin.settings', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-cog text-secondary me-2"></i>
+                            الإعدادات العامة
+                        </a>
+                        <a href="{{ url_for('admin.backup', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-download text-danger me-2"></i>
+                            النسخ الاحتياطي
+                        </a>
+                        <a href="{{ url_for('admin.system_info', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            معلومات النظام
+                        </a>
+                        {% endif %}
+                        {% if current_user.can('view_audit_logs') %}
+                        <a href="{{ url_for('admin.list_logs', from='admin_dashboard') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-history text-dark me-2"></i>
+                            سجل الأنشطة
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('main.statistics') }}" class="list-group-item list-group-item-action border-0">
+                            <i class="fas fa-chart-bar text-purple me-2"></i>
+                            الإحصائيات والتقارير
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-server me-2"></i>
+                        حالة النظام
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                <h6>النظام</h6>
+                                <span class="badge bg-success">يعمل بشكل طبيعي</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-database fa-2x text-success mb-2"></i>
+                                <h6>قاعدة البيانات</h6>
+                                <span class="badge bg-success">متصلة</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-hdd fa-2x text-info mb-2"></i>
+                                <h6>التخزين</h6>
+                                <span class="badge bg-info">متاح</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                                <h6>الأمان</h6>
+                                <span class="badge bg-success">محمي</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh statistics every 30 seconds
+setInterval(function() {
+    if (document.visibilityState === 'visible') {
+        refreshStatistics();
+    }
+}, 30000);
+
+function refreshStatistics() {
+    fetch('/admin/api/statistics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateStatistics(data.stats);
+            }
+        })
+        .catch(error => console.log('Statistics refresh failed:', error));
+}
+
+function updateStatistics(stats) {
+    // Update metric cards
+    const metrics = document.querySelectorAll('.metric-card h2');
+    if (metrics.length >= 4) {
+        metrics[0].textContent = stats.user_count || 0;
+        metrics[1].textContent = stats.active_users || 0;
+        metrics[2].textContent = stats.category_count || 0;
+        metrics[3].textContent = stats.recent_activities || 0;
+    }
+}
+
+// Initialize tooltips and interactions
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Add click handlers for quick action cards
+    document.querySelectorAll('.quick-action-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const url = this.getAttribute('onclick');
+            if (url) {
+                const match = url.match(/location\.href='([^']+)'/);
+                if (match) {
+                    window.location.href = match[1];
+                }
+            }
+        });
+    });
+
+    // Enhanced hover effects for admin cards
+    document.querySelectorAll('.admin-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+            this.style.transition = 'all 0.3s ease';
+            this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+        });
+
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        });
+    });
+});
+
+// System status check
+function checkSystemStatus() {
+    fetch('/admin/api/system-status')
+        .then(response => response.json())
+        .then(data => {
+            const indicator = document.querySelector('.status-indicator');
+            if (indicator) {
+                indicator.className = `status-indicator ${data.status === 'online' ? 'status-online' : 'status-offline'}`;
+            }
+        })
+        .catch(error => {
+            const indicator = document.querySelector('.status-indicator');
+            if (indicator) {
+                indicator.className = 'status-indicator status-warning';
+            }
+        });
+}
+
+// Check system status every minute
+setInterval(checkSystemStatus, 60000);
+checkSystemStatus(); // Initial check
+
+// Welcome animation
+setTimeout(function() {
+    document.querySelectorAll('.metric-card').forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.5s ease';
+
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100);
+        }, index * 100);
+    });
+}, 500);
+</script>
+{% endblock %}

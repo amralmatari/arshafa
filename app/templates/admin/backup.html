@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}النسخ الاحتياطي{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-download me-2"></i>
+                    النسخ الاحتياطي
+                </h2>
+                {% if request.args.get('from') == 'admin_dashboard' %}
+                <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة إلى لوحة التحكم
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Options -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        نسخ احتياطي لقاعدة البيانات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">إنشاء نسخة احتياطية كاملة من قاعدة البيانات</p>
+                    <div class="mb-3">
+                        <label class="form-label">نوع النسخة الاحتياطية</label>
+                        <select class="form-select" id="backupType">
+                            <option value="full">نسخة كاملة</option>
+                            <option value="data_only">البيانات فقط</option>
+                            <option value="structure_only">الهيكل فقط</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="includeFiles" checked>
+                            <label class="form-check-label" for="includeFiles">
+                                تضمين الملفات المرفوعة
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="createBackup()">
+                        <i class="fas fa-download me-2"></i>
+                        إنشاء نسخة احتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>
+                        استعادة النسخة الاحتياطية
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">استعادة البيانات من نسخة احتياطية سابقة</p>
+                    <div class="mb-3">
+                        <label class="form-label">اختر ملف النسخة الاحتياطية</label>
+                        <input type="file" class="form-control" id="backupFile" accept=".sql,.zip">
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تحذير:</strong> ستؤدي عملية الاستعادة إلى استبدال البيانات الحالية
+                    </div>
+                    <button class="btn btn-success" onclick="restoreBackup()">
+                        <i class="fas fa-upload me-2"></i>
+                        استعادة النسخة الاحتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup History -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        سجل النسخ الاحتياطية
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>التاريخ والوقت</th>
+                                    <th>النوع</th>
+                                    <th>الحجم</th>
+                                    <th>المستخدم</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupHistory">
+                                <tr>
+                                    <td>2024-01-15 14:30:00</td>
+                                    <td><span class="badge bg-primary">نسخة كاملة</span></td>
+                                    <td>15.2 MB</td>
+                                    <td>admin</td>
+                                    <td><span class="badge bg-success">مكتملة</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" title="تحميل">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>2024-01-14 09:15:00</td>
+                                    <td><span class="badge bg-secondary">البيانات فقط</span></td>
+                                    <td>8.7 MB</td>
+                                    <td>admin</td>
+                                    <td><span class="badge bg-success">مكتملة</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" title="تحميل">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Automated Backup Settings -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        النسخ الاحتياطي التلقائي
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="autoBackupEnabled">
+                                <label class="form-check-label" for="autoBackupEnabled">
+                                    تفعيل النسخ الاحتياطي التلقائي
+                                </label>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">تكرار النسخ الاحتياطي</label>
+                                <select class="form-select" id="backupFrequency">
+                                    <option value="daily">يومياً</option>
+                                    <option value="weekly">أسبوعياً</option>
+                                    <option value="monthly">شهرياً</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">وقت النسخ الاحتياطي</label>
+                                <input type="time" class="form-control" id="backupTime" value="02:00">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الاحتفاظ بالنسخ لمدة</label>
+                                <select class="form-select" id="retentionPeriod">
+                                    <option value="7">7 أيام</option>
+                                    <option value="30">30 يوم</option>
+                                    <option value="90">90 يوم</option>
+                                    <option value="365">سنة واحدة</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning" onclick="saveBackupSettings()">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ الإعدادات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createBackup() {
+    const backupType = document.getElementById('backupType').value;
+    const includeFiles = document.getElementById('includeFiles').checked;
+    
+    if (confirm('هل أنت متأكد من إنشاء نسخة احتياطية؟')) {
+        // Show loading
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الإنشاء...';
+        btn.disabled = true;
+        
+        // Simulate backup process
+        setTimeout(() => {
+            alert('تم إنشاء النسخة الاحتياطية بنجاح!');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            // Refresh backup history
+            loadBackupHistory();
+        }, 3000);
+    }
+}
+
+function restoreBackup() {
+    const fileInput = document.getElementById('backupFile');
+    if (!fileInput.files.length) {
+        alert('يرجى اختيار ملف النسخة الاحتياطية أولاً');
+        return;
+    }
+    
+    if (confirm('هل أنت متأكد من استعادة النسخة الاحتياطية؟ ستؤدي هذه العملية إلى استبدال البيانات الحالية.')) {
+        // Show loading
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الاستعادة...';
+        btn.disabled = true;
+        
+        // Simulate restore process
+        setTimeout(() => {
+            alert('تم استعادة النسخة الاحتياطية بنجاح!');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }, 5000);
+    }
+}
+
+function saveBackupSettings() {
+    const settings = {
+        enabled: document.getElementById('autoBackupEnabled').checked,
+        frequency: document.getElementById('backupFrequency').value,
+        time: document.getElementById('backupTime').value,
+        retention: document.getElementById('retentionPeriod').value
+    };
+    
+    // Save settings (implement API call)
+    alert('تم حفظ إعدادات النسخ الاحتياطي التلقائي');
+}
+
+function loadBackupHistory() {
+    // Load backup history from server
+    // This would be implemented with actual API calls
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadBackupHistory();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+
+{% block title %}سجل الأنشطة{% endblock %}
+
+{# Function to translate action names #}
+{% macro translate_action(action) -%}
+    {%- if action == 'LOGIN' -%}تسجيل دخول
+    {%- elif action == 'LOGOUT' -%}تسجيل خروج
+    {%- elif action == 'LOGIN_FAILED' -%}فشل تسجيل الدخول
+    {%- elif action == 'DOCUMENT_CREATE' -%}إنشاء وثيقة
+    {%- elif action == 'DOCUMENT_UPDATE' -%}تحديث وثيقة
+    {%- elif action == 'DOCUMENT_DELETE' -%}حذف وثيقة
+    {%- elif action == 'DOCUMENT_VIEW' -%}عرض وثيقة
+    {%- elif action == 'DOCUMENT_DOWNLOAD' -%}تحميل وثيقة
+    {%- elif action == 'USER_CREATE' -%}إنشاء مستخدم
+    {%- elif action == 'USER_UPDATE' -%}تحديث مستخدم
+    {%- elif action == 'USER_DELETE' -%}حذف مستخدم
+    {%- elif action == 'USER_ACTIVATE' -%}تفعيل مستخدم
+    {%- elif action == 'USER_DEACTIVATE' -%}إلغاء تفعيل مستخدم
+    {%- elif action == 'USER_ROLE_CHANGE' -%}تغيير دور مستخدم
+    {%- elif action == 'CATEGORY_CREATE' -%}إنشاء فئة
+    {%- elif action == 'CATEGORY_UPDATE' -%}تحديث فئة
+    {%- elif action == 'CATEGORY_DELETE' -%}حذف فئة
+    {%- elif action == 'ROLE_CREATE' -%}إنشاء دور
+    {%- elif action == 'ROLE_UPDATE' -%}تحديث دور
+    {%- elif action == 'ROLE_DELETE' -%}حذف دور
+    {%- elif action == 'PERMISSION_UPDATE' -%}تحديث صلاحية
+    {%- elif action == 'SYSTEM_BACKUP' -%}نسخ احتياطي
+    {%- elif action == 'SYSTEM_RESTORE' -%}استعادة نسخة احتياطية
+    {%- elif action == 'SETTINGS_UPDATE' -%}تحديث الإعدادات
+    {%- else -%}{{ action or 'غير محدد' }}
+    {%- endif -%}
+{%- endmacro %}
+
+{% block head %}
+<style>
+.log-row {
+    transition: all 0.2s ease;
+}
+
+.log-row:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.avatar-sm {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+}
+
+.filter-card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+    background-color: #f8f9fa;
+}
+
+.log-details-modal .modal-content {
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.log-details-modal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: none;
+}
+
+.log-details-modal .modal-header .btn-close {
+    filter: invert(1);
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.status-success { background-color: #28a745; }
+.status-error { background-color: #dc3545; }
+
+.action-badge {
+    font-weight: 500;
+    padding: 0.375rem 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-history me-2"></i>
+                    سجل الأنشطة
+                </h2>
+                <div>
+                    <button class="btn btn-outline-secondary me-2" onclick="refreshLogs()">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        تحديث
+                    </button>
+                    {% if request.args.get('from') == 'admin_dashboard' %}
+                    <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة إلى لوحة التحكم
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 text-dark">
+                        <i class="fas fa-filter me-2 text-dark"></i>
+                        تصفية السجلات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3" id="filterForm">
+                        <div class="col-md-2">
+                            <label for="action" class="form-label">نوع العملية</label>
+                            <select class="form-select" id="action" name="action">
+                                <option value="">جميع العمليات</option>
+                                {% for action_item in actions_with_translations %}
+                                <option value="{{ action_item.value }}" {% if filters.action == action_item.value %}selected{% endif %}>
+                                    {{ action_item.text }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="user" class="form-label">المستخدم</label>
+                            <select class="form-select" id="user" name="user">
+                                <option value="">جميع المستخدمين</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if filters.user == user.id|string %}selected{% endif %}>
+                                    {{ user.username }} - {{ user.get_full_name() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="date_from" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="date_from" name="date_from"
+                                   value="{{ filters.date_from }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="date_to" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="date_to" name="date_to"
+                                   value="{{ filters.date_to }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="success" class="form-label">النتيجة</label>
+                            <select class="form-select" id="success" name="success">
+                                <option value="">جميع النتائج</option>
+                                <option value="true" {% if filters.success == 'true' %}selected{% endif %}>نجح</option>
+                                <option value="false" {% if filters.success == 'false' %}selected{% endif %}>فشل</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="btn-group w-100" role="group">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search me-1"></i>
+                                    تصفية
+                                </button>
+                                <a href="{{ url_for('admin.list_logs') }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>
+                                    إلغاء
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        سجل الأنشطة
+                        {% if logs.total %}
+                            <span class="badge bg-primary ms-2">{{ logs.total }} سجل</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if logs.items %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>التاريخ والوقت</th>
+                                        <th>المستخدم</th>
+                                        <th>العملية</th>
+                                        <th>الوصف</th>
+                                        <th>عنوان IP</th>
+                                        <th>المتصفح</th>
+                                        <th>التفاصيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in logs.items %}
+                                    <tr class="log-row {% if not log.success %}table-warning{% endif %}">
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-bold">
+                                                    {{ log.created_at.strftime('%Y-%m-%d') }}
+                                                </span>
+                                                <small class="text-muted">
+                                                    {{ log.created_at.strftime('%H:%M:%S') }}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if log.user %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold">{{ log.user.username }}</div>
+                                                        <small class="text-muted">{{ log.user.get_full_name() }}</small>
+                                                    </div>
+                                                </div>
+                                            {% elif log.username %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm bg-secondary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                                        <i class="fas fa-user-slash"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold">{{ log.username }}</div>
+                                                        <small class="text-muted">مستخدم محذوف</small>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted">
+                                                    <i class="fas fa-question-circle me-2"></i>
+                                                    غير محدد
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% set action_info = {
+                                                'LOGIN': {'icon': 'sign-in-alt', 'color': 'success'},
+                                                'LOGOUT': {'icon': 'sign-out-alt', 'color': 'info'},
+                                                'LOGIN_FAILED': {'icon': 'sign-in-alt', 'color': 'danger'},
+                                                'DOCUMENT_CREATE': {'icon': 'file-plus', 'color': 'primary'},
+                                                'DOCUMENT_UPDATE': {'icon': 'file-edit', 'color': 'warning'},
+                                                'DOCUMENT_DELETE': {'icon': 'file-times', 'color': 'danger'},
+                                                'DOCUMENT_VIEW': {'icon': 'file-alt', 'color': 'info'},
+                                                'DOCUMENT_DOWNLOAD': {'icon': 'download', 'color': 'primary'},
+                                                'USER_CREATE': {'icon': 'user-plus', 'color': 'primary'},
+                                                'USER_UPDATE': {'icon': 'user-edit', 'color': 'warning'},
+                                                'USER_DELETE': {'icon': 'user-times', 'color': 'danger'},
+                                                'USER_ACTIVATE': {'icon': 'user-check', 'color': 'success'},
+                                                'USER_DEACTIVATE': {'icon': 'user-slash', 'color': 'danger'},
+                                                'USER_ROLE_CHANGE': {'icon': 'user-tag', 'color': 'info'},
+                                                'CATEGORY_CREATE': {'icon': 'folder-plus', 'color': 'primary'},
+                                                'CATEGORY_UPDATE': {'icon': 'folder-open', 'color': 'warning'},
+                                                'CATEGORY_DELETE': {'icon': 'folder-minus', 'color': 'danger'},
+                                                'ROLE_CREATE': {'icon': 'user-shield', 'color': 'primary'},
+                                                'ROLE_UPDATE': {'icon': 'user-shield', 'color': 'warning'},
+                                                'ROLE_DELETE': {'icon': 'user-shield', 'color': 'danger'},
+                                                'PERMISSION_UPDATE': {'icon': 'shield-alt', 'color': 'warning'},
+                                                'SYSTEM_BACKUP': {'icon': 'download', 'color': 'info'},
+                                                'SYSTEM_RESTORE': {'icon': 'upload', 'color': 'warning'},
+                                                'SETTINGS_UPDATE': {'icon': 'cog', 'color': 'secondary'}
+                                            } %}
+
+                                            {% set info = action_info.get(log.action, {'icon': 'question', 'color': 'secondary'}) %}
+
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-{{ info.color }} me-2">
+                                                    <i class="fas fa-{{ info.icon }} me-1"></i>
+                                                    {{ log.action_description }}
+                                                </span>
+                                                {% if not log.success %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        فشل
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% set translated_desc = log.description or '-' %}
+                                            {% if log.description %}
+                                                {% set translated_desc = log.description
+                                                    .replace('Created new user:', 'تم إنشاء مستخدم جديد:')
+                                                    .replace('Updated user:', 'تم تحديث المستخدم:')
+                                                    .replace('User activated', 'تم تفعيل المستخدم')
+                                                    .replace('User deactivated', 'تم إلغاء تفعيل المستخدم')
+                                                    .replace('Role changed from', 'تم تغيير الدور من')
+                                                    .replace('to', 'إلى')
+                                                    .replace('Search query:', 'استعلام البحث:')
+                                                    .replace('Filter search', 'بحث مفلتر')
+                                                    .replace('Show all documents', 'عرض جميع الوثائق')
+                                                    .replace('Category:', 'الفئة:')
+                                                    .replace('Type:', 'النوع:')
+                                                    .replace('Status:', 'الحالة:')
+                                                    .replace('Date:', 'التاريخ:')
+                                                    .replace('Results:', 'النتائج:')
+                                                %}
+                                            {% endif %}
+                                            <div class="text-truncate" style="max-width: 200px;" title="{{ translated_desc }}">
+                                                {{ translated_desc }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <code class="small">{{ log.ip_address or '-' }}</code>
+                                        </td>
+                                        <td>
+                                            <div class="text-truncate" style="max-width: 150px;" title="{{ log.user_agent or 'غير محدد' }}">
+                                                {% if log.user_agent %}
+                                                    {% if 'Chrome' in log.user_agent %}
+                                                        <i class="fab fa-chrome text-warning me-1"></i>Chrome
+                                                    {% elif 'Firefox' in log.user_agent %}
+                                                        <i class="fab fa-firefox text-danger me-1"></i>Firefox
+                                                    {% elif 'Safari' in log.user_agent %}
+                                                        <i class="fab fa-safari text-info me-1"></i>Safari
+                                                    {% elif 'Edge' in log.user_agent %}
+                                                        <i class="fab fa-edge text-primary me-1"></i>Edge
+                                                    {% elif 'Mobile' in log.user_agent or 'Android' in log.user_agent or 'iPhone' in log.user_agent %}
+                                                        <i class="fas fa-mobile-alt text-success me-1"></i>موبايل
+                                                    {% else %}
+                                                        <i class="fas fa-globe me-1"></i>متصفح آخر
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    onclick="showLogDetails('{{ log.id }}')"
+                                                    title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if logs.pages > 1 %}
+                            <nav aria-label="صفحات السجلات">
+                                <ul class="pagination justify-content-center">
+                                    {% if logs.has_prev %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.list_logs', page=logs.prev_num) }}">السابق</a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for page_num in logs.iter_pages() %}
+                                        {% if page_num %}
+                                            {% if page_num != logs.page %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('admin.list_logs', page=page_num) }}">{{ page_num }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ page_num }}</span>
+                                                </li>
+                                            {% endif %}
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <span class="page-link">…</span>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if logs.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.list_logs', page=logs.next_num) }}">التالي</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">لا توجد سجلات</h5>
+                            <p class="text-muted">لم يتم العثور على أي سجلات تطابق المعايير المحددة.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Details Modal -->
+<div class="modal fade log-details-modal" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailsModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>
+                    تفاصيل السجل
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="logDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshLogs() {
+    window.location.reload();
+}
+
+function showLogDetails(logId) {
+    // Show loading state
+    const modal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
+    const content = document.getElementById('logDetailsContent');
+
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+            <p class="mt-2">جاري تحميل التفاصيل...</p>
+        </div>
+    `;
+
+    modal.show();
+
+    // Fetch log details
+    fetch(`/admin/api/logs/${logId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayLogDetails(data.log);
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        فشل في تحميل تفاصيل السجل: ${data.error || 'خطأ غير معروف'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    حدث خطأ أثناء تحميل التفاصيل
+                </div>
+            `;
+        });
+}
+
+function displayLogDetails(log) {
+    const content = document.getElementById('logDetailsContent');
+
+    // Action type mapping
+    const actionMap = {
+        'LOGIN': 'تسجيل دخول',
+        'LOGOUT': 'تسجيل خروج',
+        'LOGIN_FAILED': 'فشل تسجيل الدخول',
+        'DOCUMENT_CREATE': 'إنشاء وثيقة',
+        'DOCUMENT_UPDATE': 'تحديث وثيقة',
+        'DOCUMENT_DELETE': 'حذف وثيقة',
+        'DOCUMENT_VIEW': 'عرض وثيقة',
+        'DOCUMENT_DOWNLOAD': 'تحميل وثيقة',
+        'USER_CREATE': 'إنشاء مستخدم',
+        'USER_UPDATE': 'تحديث مستخدم',
+        'USER_DELETE': 'حذف مستخدم',
+        'USER_ACTIVATE': 'تفعيل مستخدم',
+        'USER_DEACTIVATE': 'إلغاء تفعيل مستخدم',
+        'USER_ROLE_CHANGE': 'تغيير دور مستخدم',
+        'CATEGORY_CREATE': 'إنشاء فئة',
+        'CATEGORY_UPDATE': 'تحديث فئة',
+        'CATEGORY_DELETE': 'حذف فئة',
+        'ROLE_CREATE': 'إنشاء دور',
+        'ROLE_UPDATE': 'تحديث دور',
+        'ROLE_DELETE': 'حذف دور',
+        'PERMISSION_UPDATE': 'تحديث صلاحية',
+        'SYSTEM_BACKUP': 'نسخ احتياطي',
+        'SYSTEM_RESTORE': 'استعادة نسخة احتياطية',
+        'SETTINGS_UPDATE': 'تحديث الإعدادات'
+    };
+
+    function translateDescription(description) {
+        if (!description) return description;
+
+        return description
+            .replace(/Created new user:/g, 'تم إنشاء مستخدم جديد:')
+            .replace(/Updated user:/g, 'تم تحديث المستخدم:')
+            .replace(/User activated/g, 'تم تفعيل المستخدم')
+            .replace(/User deactivated/g, 'تم إلغاء تفعيل المستخدم')
+            .replace(/Role changed from/g, 'تم تغيير الدور من')
+            .replace(/ to /g, ' إلى ')
+            .replace(/Search query:/g, 'استعلام البحث:')
+            .replace(/Filter search/g, 'بحث مفلتر')
+            .replace(/Show all documents/g, 'عرض جميع الوثائق')
+            .replace(/Category:/g, 'الفئة:')
+            .replace(/Type:/g, 'النوع:')
+            .replace(/Status:/g, 'الحالة:')
+            .replace(/Date:/g, 'التاريخ:')
+            .replace(/Results:/g, 'النتائج:');
+    }
+
+    const actionText = log.action_description || actionMap[log.action] || log.action || 'غير محدد';
+    const createdAt = log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : 'غير محدد';
+
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    معلومات أساسية
+                </h6>
+                <table class="table table-borderless table-sm">
+                    <tr>
+                        <td class="fw-bold" style="width: 40%;">رقم السجل:</td>
+                        <td>${log.id}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">العملية:</td>
+                        <td>
+                            <span class="badge bg-primary">${actionText}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">المستخدم:</td>
+                        <td>${log.username || 'غير محدد'}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">التاريخ والوقت:</td>
+                        <td>${createdAt}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">النتيجة:</td>
+                        <td>
+                            <span class="badge ${log.success ? 'bg-success' : 'bg-danger'}">
+                                <i class="fas ${log.success ? 'fa-check' : 'fa-times'} me-1"></i>
+                                ${log.success ? 'نجح' : 'فشل'}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-success mb-3">
+                    <i class="fas fa-network-wired me-2"></i>
+                    معلومات الشبكة
+                </h6>
+                <table class="table table-borderless table-sm">
+                    <tr>
+                        <td class="fw-bold" style="width: 40%;">عنوان IP:</td>
+                        <td><code>${log.ip_address || 'غير محدد'}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">المتصفح:</td>
+                        <td>
+                            <div class="text-truncate" title="${log.user_agent || 'غير محدد'}">
+                                ${log.user_agent ? log.user_agent.substring(0, 100) + (log.user_agent.length > 100 ? '...' : '') : 'غير محدد'}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <h6 class="text-warning mb-3">
+                    <i class="fas fa-bullseye me-2"></i>
+                    معلومات الهدف
+                </h6>
+                <table class="table table-borderless table-sm">
+                    <tr>
+                        <td class="fw-bold" style="width: 40%;">نوع الهدف:</td>
+                        <td>${log.target_type || 'غير محدد'}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">اسم الهدف:</td>
+                        <td>${log.target_name || 'غير محدد'}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row">
+            <div class="col-12">
+                <h6 class="text-info mb-3">
+                    <i class="fas fa-file-alt me-2"></i>
+                    الوصف التفصيلي
+                </h6>
+                <div class="bg-light p-3 rounded">
+                    <p class="mb-0">${translateDescription(log.description) || 'لا يوجد وصف متاح'}</p>
+                </div>
+            </div>
+        </div>
+
+        ${log.error_message ? `
+        <hr>
+        <div class="row">
+            <div class="col-12">
+                <h6 class="text-danger mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    رسالة الخطأ
+                </h6>
+                <div class="alert alert-danger">
+                    <pre class="mb-0">${log.error_message}</pre>
+                </div>
+            </div>
+        </div>
+        ` : ''}
+    `;
+}
+
+// Auto-refresh every 30 seconds if on first page
+{% if logs.page == 1 %}
+setInterval(function() {
+    // Only refresh if user hasn't scrolled or interacted recently
+    if (document.visibilityState === 'visible') {
+        const lastActivity = localStorage.getItem('lastActivity') || 0;
+        const now = Date.now();
+        if (now - lastActivity > 30000) { // 30 seconds
+            refreshLogs();
+        }
+    }
+}, 30000);
+
+// Track user activity
+document.addEventListener('click', function() {
+    localStorage.setItem('lastActivity', Date.now());
+});
+
+document.addEventListener('scroll', function() {
+    localStorage.setItem('lastActivity', Date.now());
+});
+{% endif %}
+</script>
+{% endblock %}
+
+

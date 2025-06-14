@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% set title = "الصفحة الرئيسية" %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="row align-items-center min-vh-75">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold text-primary mb-4">
+                مرحباً بك في الأرشفة
+            </h1>
+            <p class="lead mb-4">
+                نظام متكامل لإدارة الوثائق والملفات . 
+                قم بتنظيم وأرشفة وإدارة جميع وثائقك بطريقة آمنة وفعالة.
+            </p>
+            <div class="d-grid gap-2 d-md-flex">
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-md-2">
+                    <i class="fas fa-user-plus me-2"></i>
+                    إنشاء حساب جديد
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    تسجيل الدخول
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-6 text-center">
+            <div class="p-5">
+                <i class="fas fa-archive text-primary" style="font-size: 8rem; opacity: 0.8;"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Features Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="text-center mb-5">مميزات النظام</h2>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="text-primary mb-3">
+                        <i class="fas fa-shield-alt fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">أمان عالي</h5>
+                    <p class="card-text">
+                        نظام أمان متقدم مع تشفير البيانات وصلاحيات المستخدمين
+                        وسجل مراجعة شامل لجميع العمليات.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="text-success mb-3">
+                        <i class="fas fa-search fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">بحث متقدم</h5>
+                    <p class="card-text">
+                        محرك بحث قوي يدعم البحث في النصوص والعناوين والفئات
+                        مع إمكانية البحث المتقدم والفلترة.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="text-info mb-3">
+                        <i class="fas fa-language fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">دعم العربية</h5>
+                    <p class="card-text">
+                        دعم كامل للغة العربية مع تخطيط من اليمين إلى اليسار
+                        وخطوط عربية جميلة.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="text-warning mb-3">
+                        <i class="fas fa-sitemap fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">تصنيف هرمي</h5>
+                    <p class="card-text">
+                        نظام تصنيف هرمي للوثائق مع إمكانية إنشاء فئات وفئات فرعية
+                        لتنظيم أفضل.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="text-danger mb-3">
+                        <i class="fas fa-history fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">إدارة الإصدارات</h5>
+                    <p class="card-text">
+                        تتبع إصدارات الوثائق مع إمكانية الرجوع للإصدارات السابقة
+                        وتتبع التغييرات.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="text-secondary mb-3">
+                        <i class="fas fa-chart-bar fa-3x"></i>
+                    </div>
+                    <h5 class="card-title">تقارير وإحصائيات</h5>
+                    <p class="card-text">
+                        تقارير شاملة وإحصائيات مفصلة عن استخدام النظام
+                        والوثائق والمستخدمين.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Workflow Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="text-center mb-5">دورة حياة الوثيقة</h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="mb-3">
+                                <i class="fas fa-plus-circle fa-2x text-primary"></i>
+                            </div>
+                            <h6>إنشاء</h6>
+                            <small class="text-muted">رفع الوثيقة وإدخال البيانات</small>
+                        </div>
+                        <div class="col-md-1 d-none d-md-block">
+                            <i class="fas fa-arrow-left fa-2x text-muted mt-3"></i>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-3">
+                                <i class="fas fa-eye fa-2x text-warning"></i>
+                            </div>
+                            <h6>مراجعة</h6>
+                            <small class="text-muted">مراجعة المحتوى والبيانات</small>
+                        </div>
+                        <div class="col-md-1 d-none d-md-block">
+                            <i class="fas fa-arrow-left fa-2x text-muted mt-3"></i>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-3">
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            </div>
+                            <h6>اعتماد</h6>
+                            <small class="text-muted">اعتماد الوثيقة ونشرها</small>
+                        </div>
+                        <div class="col-md-1 d-none d-md-block">
+                            <i class="fas fa-arrow-left fa-2x text-muted mt-3"></i>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="mb-3">
+                                <i class="fas fa-archive fa-2x text-info"></i>
+                            </div>
+                            <h6>أرشفة</h6>
+                            <small class="text-muted">أرشفة الوثيقة للحفظ طويل المدى</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Section -->
+    {% if stats %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="text-center mb-5">إحصائيات النظام</h2>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="stat-number">{{ stats.total_documents }}</div>
+                    <div class="stat-label">إجمالي الوثائق</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="stat-number">{{ stats.total_users }}</div>
+                    <div class="stat-label">المستخدمون النشطون</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="stat-number">{{ stats.total_categories }}</div>
+                    <div class="stat-label">الفئات</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="stat-number">{{ stats.total_storage }}</div>
+                    <div class="stat-label">مساحة التخزين</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,2130 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة الفئات{% endblock %}
+
+{% block extra_head %}
+<!-- Google Fonts - Cairo for better Arabic text rendering -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+// Fallback if CDN fails
+if (typeof Chart === 'undefined') {
+    console.log('Chart.js CDN failed, loading from alternative source');
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js';
+    document.head.appendChild(script);
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<style>
+.tree-view-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tree-view {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tree-item {
+    position: relative;
+    margin: 0;
+    padding: 0;
+}
+
+.main-tree-node {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.main-tree-node:hover {
+    transform: translateX(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.main-tree-node.selected {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    border: 2px solid #3b82f6 !important;
+}
+
+/* Tree control buttons */
+.card-header .btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
+}
+
+.card-header .btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: white;
+    color: white;
+}
+
+.card-header .dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header .dropdown-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.card-header .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.tree-item.level-0 > .tree-item-content {
+    border-left: 6px solid #1e3a8a;
+    background: linear-gradient(135deg, #dbeafe 0%, #ffffff 100%);
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(30, 58, 138, 0.1);
+}
+
+.tree-item.level-1 > .tree-item-content {
+    border-left: 5px solid #0891b2;
+    background: linear-gradient(135deg, #cffafe 0%, #ffffff 100%);
+    margin-right: 25px;
+    font-weight: 600;
+}
+
+.tree-item.level-2 > .tree-item-content {
+    border-left: 4px solid #059669;
+    background: linear-gradient(135deg, #d1fae5 0%, #ffffff 100%);
+    margin-right: 50px;
+    font-weight: 500;
+}
+
+.tree-item.level-3 > .tree-item-content {
+    border-left: 4px solid #d97706;
+    background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);
+    margin-right: 75px;
+}
+
+.tree-item.level-4 > .tree-item-content {
+    border-left: 3px solid #dc2626;
+    background: linear-gradient(135deg, #fee2e2 0%, #ffffff 100%);
+    margin-right: 100px;
+}
+
+.tree-item.level-5 > .tree-item-content {
+    border-left: 3px solid #7c2d12;
+    background: linear-gradient(135deg, #fef7ff 0%, #ffffff 100%);
+    margin-right: 125px;
+}
+
+/* Simplified styles for new tree structure */
+.tree-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.tree-actions .btn {
+    transition: all 0.3s ease;
+    border-radius: 6px;
+}
+
+.tree-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.tree-actions .btn-outline-primary:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.main-tree-children {
+    margin-top: 18px;
+}
+
+.tree-item {
+    margin-bottom: 10px;
+}
+
+.modal-lg {
+    max-width: 900px;
+}
+
+.btn-sm {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.tree-item-content.selected {
+    background: #e3f2fd !important;
+    border-color: #2196f3 !important;
+}
+
+/* Animation for expand/collapse */
+.tree-children {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.tree-children.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/* Modal tree styles */
+.tree-view-modal {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.modal-tree-node.target-node {
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    border: 2px solid #ffc107 !important;
+}
+
+.modal-tree-node {
+    transition: all 0.2s ease;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.modal-tree-node:hover {
+    transform: translateX(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.modal-tree-children {
+    margin-top: 12px;
+}
+
+/* Clickable badge styles */
+.clickable-badge {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.clickable-badge:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Non-clickable badge styles */
+.badge:not(.clickable-badge) {
+    cursor: default;
+    opacity: 0.7;
+}
+</style>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-folder me-2"></i>
+                    إدارة الفئات
+                </h2>
+                <div>
+                    <a href="{{ url_for('admin.create_category', return_to=return_to) }}" class="btn btn-success me-2">
+                        <i class="fas fa-plus me-2"></i>
+                        إضافة فئة جديدة
+                    </a>
+
+                    {% if request.args.get('from') == 'admin_dashboard' %}
+                    <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة إلى لوحة التحكم
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        قائمة الفئات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                        <!-- Tree View Container -->
+                        <div class="tree-view-container">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header bg-info text-white">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-sitemap me-2"></i>
+                                                    الهيكل الشجري للفئات
+                                                </h6>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-light btn-sm"
+                                                            onclick="expandAllCategories()" title="توسيع جميع الفئات">
+                                                        <i class="fas fa-expand-alt me-1"></i>
+                                                        توسيع الكل
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-light btn-sm"
+                                                            onclick="collapseAllCategories()" title="طي جميع الفئات">
+                                                        <i class="fas fa-compress-alt me-1"></i>
+                                                        طي الكل
+                                                    </button>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-outline-light btn-sm dropdown-toggle"
+                                                                data-bs-toggle="dropdown" aria-expanded="false" title="خيارات متقدمة">
+                                                            <i class="fas fa-cog me-1"></i>
+                                                            خيارات
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" onclick="expandMainCategories()">
+                                                                    <i class="fas fa-folder me-2"></i>
+                                                                    توسيع الفئات الرئيسية
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" onclick="collapseMainCategories()">
+                                                                    <i class="fas fa-folder-minus me-2"></i>
+                                                                    طي الفئات الرئيسية
+                                                                </a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" onclick="expandSubCategories()">
+                                                                    <i class="fas fa-folder-open me-2"></i>
+                                                                    توسيع الفئات الفرعية
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" onclick="collapseSubCategories()">
+                                                                    <i class="fas fa-folder-minus me-2"></i>
+                                                                    طي الفئات الفرعية
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div id="categoriesTreeView">
+                                                <!-- Tree will be built here -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-folder fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">لا توجد فئات</h5>
+                            <p class="text-muted">لم يتم إنشاء أي فئات بعد. ابدأ بإضافة فئة جديدة.</p>
+                            <a href="{{ url_for('admin.create_category', return_to=return_to) }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>
+                                إضافة فئة جديدة
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Enhanced Statistics -->
+    {% if categories and statistics %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            إحصائيات الفئات المتقدمة
+                        </h5>
+                        <span class="badge bg-light text-dark">
+                            أعمق مستوى: {{ statistics.deepest_level }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Main Statistics Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-primary mb-2">{{ statistics.total_categories }}</h3>
+                                <p class="mb-0 fw-bold">إجمالي الفئات</p>
+                                <small class="text-muted">جميع المستويات</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-success mb-2">{{ statistics.main_categories }}</h3>
+                                <p class="mb-0 fw-bold">الفئات الرئيسية</p>
+                                <small class="text-muted">المستوى 0</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-warning mb-2">{{ statistics.total_documents }}</h3>
+                                <p class="mb-0 fw-bold">إجمالي الوثائق</p>
+                                <small class="text-muted">جميع الفئات</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded bg-light">
+                                <h3 class="text-info mb-2">{{ statistics.categories_with_documents }}</h3>
+                                <p class="mb-0 fw-bold">فئات فرعية تحتوي وثائق</p>
+                                <small class="text-muted">{{ statistics.empty_categories }} فئة فرعية فارغة</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories by Level -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-layer-group me-2"></i>
+                                      توزيع الفئات حسب المستويات الفرعية
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        
+                                        {% for level in range(1, statistics.deepest_level + 1) %}
+                                            {% if statistics.subcategories_by_level[level] > 0 %}
+                                            <div class="col-6">
+                                                <div class="text-center p-2 border rounded mb-2">
+                                                    <h5 class="text-{{ 'info' if level == 1 else 'success' if level == 2 else 'warning' if level == 3 else 'danger' }}">
+                                                        {{ statistics.subcategories_by_level[level] }}
+                                                    </h5>
+                                                    <small>المستوى {{ level }}</small>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-file-alt me-2"></i>
+                                        توزيع الوثائق حسب المستويات الفرعية
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        
+                                        {% for level in range(1, statistics.deepest_level + 1) %}
+                                            {% if statistics.documents_by_level[level] > 0 %}
+                                            <div class="col-6">
+                                                <div class="text-center p-2 border rounded mb-2">
+                                                    <h5 class="text-{{ 'info' if level == 1 else 'success' if level == 2 else 'warning' if level == 3 else 'danger' }}">
+                                                        {{ statistics.documents_by_level[level] }}
+                                                    </h5>
+                                                    <small>المستوى {{ level }}</small>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Categories Cards -->
+                    {% if statistics.main_categories_chart_data %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-folder me-2"></i>
+                                        توزيع الوثائق على الفئات الرئيسية
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Categories Cards Row -->
+                                    <div class="row mb-4">
+                                        {% for category in categories if category.parent_id is none %}
+                                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                                            {% set category_color = category.color | category_color_hex %}
+                                            <div class="category-stat-card h-100 clickable-category-card"
+                                                 style="border-left: 4px solid {{ category_color }}; cursor: pointer;"
+                                                 data-category-id="{{ category.id }}"
+                                                 data-category-name="{{ category.name_ar or category.name }}"
+                                                 data-category-color="{{ category_color }}"
+                                                 title="انقر لعرض تفاصيل التوزيع">
+                                                <div class="card-body p-3">
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <div class="category-icon me-3" style="background-color: {{ category_color }}20;">
+                                                            <i class="fas fa-{{ category.icon or 'folder' }}" style="color: {{ category_color }};"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="mb-0 category-name">{{ category.name_ar or category.name }}</h6>
+                                                        </div>
+                                                        <div class="ms-2">
+                                                            <i class="fas fa-chart-pie text-muted" style="font-size: 14px;" title="انقر لعرض التفاصيل"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-center">
+                                                        {% set total_docs = category.total_documents if category.total_documents is defined else 0 %}
+                                                        <h3 class="mb-1" style="color: {{ category_color }};">{{ total_docs }}</h3>
+                                                        <small class="text-muted">وثيقة إجمالي</small>
+                                                    </div>
+                                                    <div class="progress mt-2" style="height: 6px;">
+                                                        <div class="progress-bar"
+                                                             style="background-color: {{ category_color }}; width: {{ (total_docs / statistics.total_documents * 100) if statistics.total_documents > 0 else 0 }}%;">
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-center mt-1">
+                                                        <small class="text-muted">
+                                                            {{ "%.1f"|format((total_docs / statistics.total_documents * 100) if statistics.total_documents > 0 else 0) }}% من الإجمالي
+                                                        </small>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <button class="btn btn-outline-primary btn-sm w-100 subcategory-details-btn"
+                                                                data-category-id="{{ category.id }}"
+                                                                data-category-name="{{ category.name_ar or category.name }}"
+                                                                data-category-color="{{ category_color }}"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#subcategoryModal">
+                                                            <i class="fas fa-chart-pie me-1"></i>
+                                                            تفاصيل التوزيع
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+
+                                  
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Summary Statistics -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <strong>{{ statistics.total_categories }}</strong><br>
+                                        <small>إجمالي الفئات</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>{{ statistics.total_documents }}</strong><br>
+                                        <small>إجمالي الوثائق</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>{{ "%.1f"|format(statistics.total_documents / statistics.total_categories if statistics.total_categories > 0 else 0) }}</strong><br>
+                                        <small>متوسط الوثائق/فئة</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>{{ "%.1f"|format((statistics.categories_with_documents / statistics.total_categories * 100) if statistics.total_categories > 0 else 0) }}%</strong><br>
+                                        <small>نسبة الفئات المستخدمة</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Category Details Modal -->
+<div class="modal fade" id="categoryDetailsModal" tabindex="-1" aria-labelledby="categoryDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="categoryDetailsModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>
+                    تفاصيل الفئة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="categoryDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    تأكيد حذف الفئة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف الفئة <strong id="categoryName"></strong>؟</p>
+                <p class="text-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    سيتم حذف جميع الفئات الفرعية والوثائق المرتبطة بها!
+                </p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    هذا الإجراء لا يمكن التراجع عنه!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>
+                        حذف نهائياً
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subcategory Details Modal -->
+<div class="modal fade" id="subcategoryModal" tabindex="-1" aria-labelledby="subcategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="subcategoryModalLabel">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    تفاصيل توزيع الوثائق
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="closeModalAndRefresh()"></button>
+            </div>
+            <div class="modal-body">
+                <div id="subcategoryContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                        <p class="mt-2">جاري تحميل البيانات...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeModalAndRefresh()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+const RETURN_TO = '{{ return_to }}';
+
+// Function to navigate to documents page with category filters
+function navigateToDocuments(categoryId, type) {
+    // Fetch category hierarchy from server
+    fetch(`/admin/categories/hierarchy/${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const hierarchy = data.hierarchy;
+
+                // Build URL parameters based on hierarchy
+                let url = '/documents/list?';
+                const params = new URLSearchParams();
+
+                // Apply filters based on hierarchy levels
+                hierarchy.forEach((cat, index) => {
+                    if (index === 0) {
+                        params.append('main_category', cat.id);
+                    } else if (index === 1) {
+                        params.append('sub_category_1', cat.id);
+                    } else if (index === 2) {
+                        params.append('sub_category_2', cat.id);
+                    } else if (index === 3) {
+                        params.append('sub_category_3', cat.id);
+                    }
+                });
+
+                // Add return parameters for navigation back
+                params.append('return_to', 'admin_categories');
+                params.append('return_category_id', categoryId);
+
+                // Navigate to the documents page
+                window.location.href = url + params.toString();
+            } else {
+                console.error('Failed to get category hierarchy:', data.message);
+                // Fallback: navigate with just the category ID
+                window.location.href = `/documents/list?category=${categoryId}`;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching category hierarchy:', error);
+            // Fallback: navigate with just the category ID
+            window.location.href = `/documents/list?category=${categoryId}`;
+        });
+}
+
+// Helper function to find category by ID in nested structure
+function findCategoryById(categories, targetId) {
+    for (const category of categories) {
+        if (category.id === targetId) {
+            return category;
+        }
+
+        if (category.children && category.children.length > 0) {
+            const found = findCategoryById(category.children, targetId);
+            if (found) {
+                return found;
+            }
+        }
+    }
+    return null;
+}
+
+// Helper function to build category hierarchy path
+function buildCategoryHierarchy(category) {
+    const hierarchy = [];
+    let current = category;
+
+    // Build hierarchy from current category up to root
+    while (current) {
+        hierarchy.unshift(current); // Add to beginning of array
+        current = current.parent_category || null;
+    }
+
+    return hierarchy;
+}
+
+function confirmDelete(categoryId, categoryName) {
+    document.getElementById('categoryName').textContent = categoryName;
+    document.getElementById('deleteForm').action = `/admin/categories/delete/${categoryId}?return_to=${RETURN_TO}`;
+
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function showCategoryDetails(categoryId) {
+    const modal = new bootstrap.Modal(document.getElementById('categoryDetailsModal'));
+    const content = document.getElementById('categoryDetailsContent');
+
+    // Show loading spinner
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-info" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+        </div>
+    `;
+
+    modal.show();
+
+    // Fetch category details
+    fetch(`/admin/categories/details/${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                content.innerHTML = buildCategoryDetailsHTML(data.category);
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        خطأ في تحميل تفاصيل الفئة: ${data.message}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    خطأ في الاتصال بالخادم
+                </div>
+            `;
+        });
+}
+
+function buildCategoryDetailsHTML(category) {
+    let html = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            المعلومات الأساسية
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-${category.icon || 'folder'} me-2 fa-2x" style="color: ${category.color_hex || category.color || '#007bff'};"></i>
+                                <div>
+                                    <h5 class="mb-0">${category.name_ar || category.name}</h5>
+                                    ${category.name_ar && category.name ? `<small class="text-muted">${category.name}</small>` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>الوصف:</strong>
+                            <p class="mb-0">${category.description_ar || category.description || 'لا يوجد وصف'}</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>المسار الهرمي:</strong>
+                            <p class="mb-0 text-muted" style="word-break: break-word;">${category.hierarchy_path}</p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>تاريخ الإنشاء:</strong>
+                                <p class="mb-0">${category.created_at || 'غير محدد'}</p>
+                            </div>
+                            <div class="col-6">
+                                <strong>آخر تحديث:</strong>
+                                <p class="mb-0">${category.updated_at || 'غير محدد'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            الإحصائيات
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="border rounded p-3 mb-3">
+                                    <h4 class="text-info">${category.total_documents}</h4>
+                                    <small>إجمالي الوثائق</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-3 mb-3">
+                                    <h4 class="text-primary">${category.direct_documents}</h4>
+                                    <small>الوثائق المباشرة</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-warning">${category.subcategories_count}</h4>
+                                    <small>الفئات الفرعية</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-3">
+                                    <h4 class="text-secondary">${category.level}</h4>
+                                    <small>مستوى الفئة</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (category.full_tree) {
+        html += `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-sitemap me-2"></i>
+                                الهيكل الشجري الكامل
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            ${buildFullCategoryTree(category.full_tree, category.id)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    return html;
+}
+
+function buildFullCategoryTree(treeData, targetId) {
+    return `
+        <div class="tree-view-modal">
+            ${buildModalTreeNode(treeData, targetId, 0)}
+        </div>
+    `;
+}
+
+function buildModalTreeNode(node, targetId, level) {
+    const isTarget = node.id === targetId;
+    const hasChildren = node.children && node.children.length > 0;
+
+    const levelColors = {
+        0: { border: '#1e3a8a', bg: '#dbeafe', text: 'text-primary' },
+        1: { border: '#0891b2', bg: '#cffafe', text: 'text-info' },
+        2: { border: '#059669', bg: '#d1fae5', text: 'text-success' },
+        3: { border: '#d97706', bg: '#fef3c7', text: 'text-warning' },
+        4: { border: '#dc2626', bg: '#fee2e2', text: 'text-danger' },
+        5: { border: '#7c2d12', bg: '#fef7ff', text: 'text-dark' }
+    };
+
+    const style = levelColors[level] || levelColors[5];
+    const marginRight = level * 25;
+
+    let html = `
+        <div class="modal-tree-node ${isTarget ? 'target-node' : ''}"
+             style="margin-right: ${marginRight}px; border-right: 3px solid ${style.border}; background: ${style.bg}; margin-bottom: 8px; padding: 12px; border-radius: 6px; max-width: 100%; box-sizing: border-box;">
+
+            <div class="d-flex align-items-center justify-content-between" style="flex-wrap: wrap;">
+                <div class="d-flex align-items-center" style="flex: 1; min-width: 0;">
+                    ${hasChildren ?
+                        `<button class="btn btn-sm btn-outline-primary me-2" onclick="toggleModalNode(this)">
+                            <i class="fas fa-minus"></i>
+                         </button>` :
+                        `<span class="me-4"></span>`
+                    }
+
+                    <i class="fas fa-${node.icon || 'folder'} text-${node.color || 'primary'} me-2 fs-5"></i>
+
+                    <div style="flex: 1; min-width: 0;">
+                        <h6 class="mb-1 ${style.text} ${isTarget ? 'fw-bold' : ''}" style="word-break: break-word;">
+                            ${node.name_ar || node.name}
+                            ${isTarget ? ' <span class="badge bg-warning text-dark">الفئة المحددة</span>' : ''}
+                        </h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <span class="badge ${level === 0 ? 'bg-primary' : level === 1 ? 'bg-info' : level === 2 ? 'bg-success' : level === 3 ? 'bg-warning' : 'bg-danger'}">
+                                ${level === 0 ? 'فئة رئيسية' : 'مستوى ' + level}
+                            </span>
+                            ${(() => {
+                                const hasChildren = node.children && node.children.length > 0;
+                                const hasDirectDocs = node.direct_documents > 0;
+                                const hasTotalDocs = node.total_documents > 0;
+
+                                // التحقق من وجود وثائق في الفئات الفرعية
+                                const childrenHaveDocs = hasChildren && node.children.some(child =>
+                                    child.direct_documents > 0 || child.total_documents > 0
+                                );
+
+                                if (level === 0) {
+                                    // الفئات الرئيسية: عرض الوثائق الإجمالية فقط
+                                    if (node.total_documents > 0) {
+                                        return `<span class="badge bg-info clickable-badge" onclick="navigateToDocuments(${node.id}, 'main')" style="cursor: pointer;" title="انقر لعرض الوثائق">${node.total_documents} وثيقة إجمالي</span>`;
+                                    } else {
+                                        return `<span class="badge bg-secondary" title="لا توجد وثائق">${node.total_documents} وثيقة إجمالي</span>`;
+                                    }
+                                } else if (hasChildren && (hasDirectDocs || childrenHaveDocs)) {
+                                    // الفئات الفرعية التي تحتوي على فئات فرعية أدنى ولديها وثائق (مباشرة أو في الفئات الفرعية)
+                                    let badges = '';
+                                    if (childrenHaveDocs) {
+                                        if (node.total_documents > 0) {
+                                            badges += `<span class="badge bg-info clickable-badge" onclick="navigateToDocuments(${node.id}, 'total')" style="cursor: pointer;" title="انقر لعرض جميع الوثائق">${node.total_documents} وثيقة إجمالي</span>`;
+                                        } else {
+                                            badges += `<span class="badge bg-secondary" title="لا توجد وثائق">${node.total_documents} وثيقة إجمالي</span>`;
+                                        }
+                                    }
+                                    if (hasDirectDocs) {
+                                        badges += `<span class="badge bg-secondary clickable-badge" onclick="navigateToDocuments(${node.id}, 'direct')" style="cursor: pointer;" title="انقر لعرض الوثائق المباشرة">${node.direct_documents} وثيقة مباشرة</span>`;
+                                    }
+                                    return badges;
+                                } else if (hasDirectDocs) {
+                                    // الفئات الفرعية النهائية التي تحتوي على وثائق مباشرة فقط
+                                    return `<span class="badge bg-secondary clickable-badge" onclick="navigateToDocuments(${node.id}, 'direct')" style="cursor: pointer;" title="انقر لعرض الوثائق">${node.direct_documents} وثيقة مباشرة</span>`;
+                                } else {
+                                    // الفئات الفرعية الفارغة
+                                    return '';
+                                }
+                            })()}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end" style="flex-shrink: 0;">
+                    <small class="text-muted" style="white-space: nowrap;">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        ${node.created_at}
+                    </small>
+                </div>
+            </div>
+        `;
+
+    if (hasChildren) {
+        html += `
+            <div class="modal-tree-children" style="display: block; margin-top: 12px;">
+                ${node.children.map(child => buildModalTreeNode(child, targetId, level + 1)).join('')}
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    return html;
+}
+
+function toggleModalNode(button) {
+    const icon = button.querySelector('i');
+    const treeNode = button.closest('.modal-tree-node');
+    const children = treeNode.querySelector('.modal-tree-children');
+
+    if (children) {
+        const isHidden = children.style.display === 'none';
+
+        if (isHidden) {
+            children.style.display = 'block';
+            icon.className = 'fas fa-minus';
+        } else {
+            children.style.display = 'none';
+            icon.className = 'fas fa-plus';
+        }
+    }
+}
+
+// Build tree view from categories data
+function buildTreeView() {
+    const categoriesData = {{ categories | tojson }};
+    const treeContainer = document.getElementById('categoriesTreeView');
+
+    if (!treeContainer) return;
+
+    // Build tree HTML
+    const treeHTML = `<ul class="tree-view">${buildTreeNodes(categoriesData, RETURN_TO)}</ul>`;
+    treeContainer.innerHTML = treeHTML;
+
+    // Add event listeners for toggle buttons
+    addTreeEventListeners();
+}
+
+function buildTreeNodes(categories, return_to) {
+    let html = '';
+
+    categories.forEach(category => {
+        html += buildTreeNode(category, return_to);
+    });
+
+    return html;
+}
+
+function buildTreeNode(category, return_to) {
+    const hasChildren = category.children && category.children.length > 0;
+
+    // Determine level colors and styles
+    const levelColors = {
+        0: { border: '#1e3a8a', bg: '#dbeafe', text: 'text-primary', badge: 'bg-primary' },
+        1: { border: '#0891b2', bg: '#cffafe', text: 'text-info', badge: 'bg-info' },
+        2: { border: '#059669', bg: '#d1fae5', text: 'text-success', badge: 'bg-success' },
+        3: { border: '#d97706', bg: '#fef3c7', text: 'text-warning', badge: 'bg-warning' },
+        4: { border: '#dc2626', bg: '#fee2e2', text: 'text-danger', badge: 'bg-danger' },
+        5: { border: '#7c2d12', bg: '#fef7ff', text: 'text-dark', badge: 'bg-dark' }
+    };
+
+    const style = levelColors[category.level] || levelColors[5];
+    const marginRight = category.level * 25;
+
+    let html = `
+        <li class="tree-item level-${category.level}" data-category-id="${category.id}">
+            <div class="main-tree-node"
+                 style="margin-right: ${marginRight}px; border-right: 3px solid ${style.border}; background: ${style.bg}; margin-bottom: 15px; padding: 15px; border-radius: 6px;">
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        ${hasChildren ?
+                            `<button class="btn btn-sm btn-outline-primary me-2" onclick="toggleMainNode(this)">
+                                <i class="fas fa-plus"></i>
+                             </button>` :
+                            `<span class="me-4"></span>`
+                        }
+
+                        <i class="fas fa-${category.icon || 'folder'} me-2 fs-5" style="color: ${category.color_hex || category.color || '#007bff'};"></i>
+
+                        <div>
+                            <h6 class="mb-1 ${style.text}">
+                                ${category.name_ar || category.name}
+                            </h6>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${style.badge}">
+                            ${category.level === 0 ? 'فئة رئيسية' : 'مستوى ' + category.level}
+                        </span>
+                        ${(() => {
+                            const hasChildren = category.children && category.children.length > 0;
+                            const hasDirectDocs = category.direct_documents > 0;
+                            const hasTotalDocs = category.total_documents > 0;
+
+                            // التحقق من وجود وثائق في الفئات الفرعية
+                            const childrenHaveDocs = hasChildren && category.children.some(child =>
+                                child.direct_documents > 0 || child.total_documents > 0
+                            );
+
+                            if (category.level === 0) {
+                                // الفئات الرئيسية: عرض الوثائق الإجمالية فقط
+                                if (category.total_documents > 0) {
+                                    return `<span class="badge bg-info clickable-badge" onclick="navigateToDocuments(${category.id}, 'main')" style="cursor: pointer;" title="انقر لعرض الوثائق">${category.total_documents} وثيقة إجمالي</span>`;
+                                } else {
+                                    return `<span class="badge bg-secondary" title="لا توجد وثائق">${category.total_documents} وثيقة إجمالي</span>`;
+                                }
+                            } else if (hasChildren && (hasDirectDocs || childrenHaveDocs)) {
+                                // الفئات الفرعية التي تحتوي على فئات فرعية أدنى ولديها وثائق (مباشرة أو في الفئات الفرعية)
+                                let badges = '';
+                                if (childrenHaveDocs) {
+                                    if (category.total_documents > 0) {
+                                        badges += `<span class="badge bg-info clickable-badge" onclick="navigateToDocuments(${category.id}, 'total')" style="cursor: pointer;" title="انقر لعرض جميع الوثائق">${category.total_documents} وثيقة إجمالي</span>`;
+                                    } else {
+                                        badges += `<span class="badge bg-secondary" title="لا توجد وثائق">${category.total_documents} وثيقة إجمالي</span>`;
+                                    }
+                                }
+                                if (hasDirectDocs) {
+                                    badges += `<span class="badge bg-secondary clickable-badge" onclick="navigateToDocuments(${category.id}, 'direct')" style="cursor: pointer;" title="انقر لعرض الوثائق المباشرة">${category.direct_documents} وثيقة مباشرة</span>`;
+                                }
+                                return badges;
+                            } else if (hasDirectDocs) {
+                                // الفئات الفرعية النهائية التي تحتوي على وثائق مباشرة فقط
+                                return `<span class="badge bg-secondary clickable-badge" onclick="navigateToDocuments(${category.id}, 'direct')" style="cursor: pointer;" title="انقر لعرض الوثائق">${category.direct_documents} وثيقة مباشرة</span>`;
+                            } else {
+                                // الفئات الفرعية الفارغة
+                                return '';
+                            }
+                        })()}
+
+                        <div class="tree-actions">
+                            <button type="button" class="btn btn-outline-info btn-sm"
+                                    onclick="showCategoryDetails(${category.id})" title="تفاصيل">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                            <a href="/admin/categories/create?parent_id=${category.id}&return_to=${return_to}"
+                               class="btn btn-outline-primary btn-sm" title="إضافة فئة فرعية">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                            <a href="/admin/categories/edit/${category.id}${return_to ? '?return_to=' + return_to : ''}"
+                               class="btn btn-outline-success btn-sm" title="تعديل">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    onclick="confirmDelete(${category.id}, '${(category.name_ar || category.name).replace(/'/g, "\\'")}')" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    `;
+
+    // Add children if they exist
+    if (hasChildren) {
+        html += `
+            <ul class="main-tree-children" style="display: none; margin-top: 18px;">
+                ${buildTreeNodes(category.children, return_to)}
+            </ul>
+        `;
+    }
+
+    html += '</li>';
+    return html;
+}
+
+function toggleMainNode(button) {
+    const icon = button.querySelector('i');
+    const treeItem = button.closest('.tree-item');
+    const children = treeItem.querySelector('.main-tree-children');
+
+    if (children) {
+        const isHidden = children.style.display === 'none';
+
+        if (isHidden) {
+            children.style.display = 'block';
+            icon.className = 'fas fa-minus';
+        } else {
+            children.style.display = 'none';
+            icon.className = 'fas fa-plus';
+        }
+    }
+}
+
+function toggleNode(button) {
+    const icon = button.querySelector('i');
+    const treeItem = button.closest('.tree-item');
+    const children = treeItem.querySelector('.tree-children');
+
+    if (children) {
+        const isCollapsed = children.classList.contains('collapsed');
+
+        if (isCollapsed) {
+            children.classList.remove('collapsed');
+            icon.className = 'fas fa-minus';
+            button.classList.remove('collapsed');
+        } else {
+            children.classList.add('collapsed');
+            icon.className = 'fas fa-plus';
+            button.classList.add('collapsed');
+        }
+    }
+}
+
+function addTreeEventListeners() {
+    // Add click handlers for tree items (optional - for future enhancements)
+    document.querySelectorAll('.main-tree-node').forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Prevent toggle when clicking on buttons
+            if (e.target.closest('.tree-actions') || e.target.closest('button')) {
+                return;
+            }
+
+            // Optional: Add selection highlighting
+            document.querySelectorAll('.main-tree-node').forEach(el => el.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+}
+
+// Tree control functions
+function expandAllCategories() {
+    document.querySelectorAll('.main-tree-children').forEach(children => {
+        children.style.display = 'block';
+    });
+
+    document.querySelectorAll('.main-tree-node button i').forEach(icon => {
+        if (icon.classList.contains('fa-plus')) {
+            icon.className = 'fas fa-minus';
+        }
+    });
+}
+
+function collapseAllCategories() {
+    document.querySelectorAll('.main-tree-children').forEach(children => {
+        children.style.display = 'none';
+    });
+
+    document.querySelectorAll('.main-tree-node button i').forEach(icon => {
+        if (icon.classList.contains('fa-minus')) {
+            icon.className = 'fas fa-plus';
+        }
+    });
+}
+
+function expandMainCategories() {
+    // First collapse all
+    collapseAllCategories();
+
+    // Then expand only the direct children of main categories (level 0 -> level 1)
+    // This shows only the first level of subcategories under main categories
+    document.querySelectorAll('.tree-item.level-0').forEach(mainCategory => {
+        const directChildren = mainCategory.querySelector('.main-tree-children');
+        if (directChildren) {
+            directChildren.style.display = 'block';
+
+            // Update the toggle button icon for this main category
+            const toggleButton = mainCategory.querySelector('.main-tree-node button i');
+            if (toggleButton && toggleButton.classList.contains('fa-plus')) {
+                toggleButton.className = 'fas fa-minus';
+            }
+        }
+    });
+}
+
+function collapseMainCategories() {
+    // Collapse only the direct children of main categories (level 0)
+    document.querySelectorAll('.tree-item.level-0').forEach(mainCategory => {
+        const directChildren = mainCategory.querySelector('.main-tree-children');
+        if (directChildren) {
+            directChildren.style.display = 'none';
+
+            // Update the toggle button icon for this main category
+            const toggleButton = mainCategory.querySelector('.main-tree-node button i');
+            if (toggleButton && toggleButton.classList.contains('fa-minus')) {
+                toggleButton.className = 'fas fa-plus';
+            }
+        }
+    });
+}
+
+function expandSubCategories() {
+    // Expand all subcategories (level 1 and above) but keep main categories as they are
+    document.querySelectorAll('.tree-item').forEach(item => {
+        // Only work with subcategories (level 1 and above)
+        if (!item.classList.contains('level-0')) {
+            const children = item.querySelector('.main-tree-children');
+            if (children) {
+                children.style.display = 'block';
+
+                // Update the toggle button icon
+                const icon = item.querySelector('.main-tree-node button i');
+                if (icon && icon.classList.contains('fa-plus')) {
+                    icon.className = 'fas fa-minus';
+                }
+            }
+        }
+    });
+}
+
+function collapseSubCategories() {
+    // Collapse all subcategories (level 1 and above) but keep main categories as they are
+    document.querySelectorAll('.tree-item').forEach(item => {
+        // Only work with subcategories (level 1 and above)
+        if (!item.classList.contains('level-0')) {
+            const children = item.querySelector('.main-tree-children');
+            if (children) {
+                children.style.display = 'none';
+
+                // Update the toggle button icon
+                const icon = item.querySelector('.main-tree-node button i');
+                if (icon && icon.classList.contains('fa-minus')) {
+                    icon.className = 'fas fa-plus';
+                }
+            }
+        }
+    });
+}
+
+// Chart variables
+let currentChart = null;
+let currentChartType = 'bar';
+
+// Initialize chart
+function initializeChart() {
+    console.log('initializeChart called');
+
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        setTimeout(initializeChart, 500); // Retry after 500ms
+        return;
+    }
+
+    // Fallback test data
+    const fallbackData = [
+        {name: 'التقارير المالية', documents: 37, color: '#007bff'},
+        {name: 'الخطابات الرسمية', documents: 14, color: '#28a745'}
+    ];
+
+    {% if statistics and statistics.main_categories_chart_data %}
+    const chartData = {{ statistics.main_categories_chart_data | tojson }};
+    console.log('Server chart data:', chartData);
+
+    if (chartData && chartData.length > 0) {
+        console.log('Creating chart with server data');
+        createChart(chartData, currentChartType);
+    } else {
+        console.log('No server data, using fallback data');
+        createChart(fallbackData, currentChartType);
+    }
+    {% else %}
+    console.log('No statistics available, using fallback data');
+    createChart(fallbackData, currentChartType);
+    {% endif %}
+}
+
+function showNoDataMessage() {
+    console.log('Showing no data message');
+    const ctx = document.getElementById('mainCategoriesChart');
+    if (ctx) {
+        const parent = ctx.parentElement;
+        parent.innerHTML = '<div class="text-center text-muted p-4"><i class="fas fa-chart-bar fa-3x mb-3"></i><br>لا توجد بيانات لعرضها<br><small>تحقق من وجود فئات تحتوي على وثائق</small></div>';
+    } else {
+        console.error('Canvas element not found for no data message');
+    }
+}
+
+function createChart(chartData, type) {
+    console.log('createChart called with:', chartData, type);
+
+    const ctx = document.getElementById('mainCategoriesChart');
+    if (!ctx) {
+        console.error('Canvas element not found');
+        return;
+    }
+
+    console.log('Canvas element found:', ctx);
+
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not available');
+        showNoDataMessage();
+        return;
+    }
+
+    // Destroy existing chart
+    if (currentChart) {
+        console.log('Destroying existing chart');
+        currentChart.destroy();
+        currentChart = null;
+    }
+
+    // Filter out categories with 0 documents for better visualization
+    const filteredData = chartData.filter(item => item.documents > 0);
+    console.log('Filtered data:', filteredData);
+
+    if (filteredData.length === 0) {
+        console.log('No data after filtering');
+        showNoDataMessage();
+        return;
+    }
+
+    const isBarChart = type === 'bar';
+    console.log('Creating chart type:', type);
+
+    // Simple chart configuration
+    const config = {
+        type: type,
+        data: {
+            labels: filteredData.map(item => item.name),
+            datasets: [{
+                label: 'عدد الوثائق',
+                data: filteredData.map(item => item.documents),
+                backgroundColor: filteredData.map(item => item.color + '80'),
+                borderColor: filteredData.map(item => item.color),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'توزيع الوثائق على الفئات الرئيسية'
+                },
+                legend: {
+                    display: !isBarChart
+                }
+            },
+            scales: isBarChart ? {
+                y: {
+                    beginAtZero: true
+                }
+            } : {}
+        }
+    };
+
+    console.log('Chart config:', config);
+
+    try {
+        console.log('Creating Chart instance...');
+        currentChart = new Chart(ctx, config);
+        console.log('Chart created successfully:', currentChart);
+
+    } catch (error) {
+        console.error('Error creating chart:', error);
+        showNoDataMessage();
+    }
+}
+
+function toggleChartType() {
+    {% if statistics and statistics.main_categories_chart_data %}
+    const chartData = {{ statistics.main_categories_chart_data | tojson }};
+
+    if (chartData && chartData.length > 0) {
+        const chartTypeText = document.getElementById('chartTypeText');
+
+        if (currentChartType === 'bar') {
+            currentChartType = 'pie';
+            chartTypeText.textContent = 'عمودي';
+        } else {
+            currentChartType = 'bar';
+            chartTypeText.textContent = 'دائري';
+        }
+
+        createChart(chartData, currentChartType);
+    }
+    {% endif %}
+}
+
+// Function to show subcategory details
+function showSubcategoryDetails(categoryId, categoryName, categoryColor) {
+    const modalElement = document.getElementById('subcategoryModal');
+    const content = document.getElementById('subcategoryContent');
+
+    // Save current scroll position
+    const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    sessionStorage.setItem('modalScrollPosition', scrollPosition);
+
+    // Clean up any existing modal instances
+    const existingModal = bootstrap.Modal.getInstance(modalElement);
+    if (existingModal) {
+        existingModal.dispose();
+    }
+
+    // Create new modal instance
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Update modal title
+    document.getElementById('subcategoryModalLabel').innerHTML = `
+        <i class="fas fa-chart-pie me-2" style="color: #3498db;"></i>
+        <span style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-weight: 600; color: #2c3e50;">تفاصيل توزيع الوثائق - ${categoryName}</span>
+    `;
+
+    // Show loading spinner
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+            <p class="mt-2">جاري تحميل بيانات الفئات الفرعية...</p>
+        </div>
+    `;
+
+    // Add event listeners for proper cleanup
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        // Clean up modal instance
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.dispose();
+        }
+
+        // Remove backdrop if it exists
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+
+        // Restore body scroll
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+
+        // Clear content
+        content.innerHTML = '';
+
+        // Restore scroll position smoothly
+        const savedScrollPosition = sessionStorage.getItem('modalScrollPosition');
+        if (savedScrollPosition) {
+            setTimeout(() => {
+                window.scrollTo({
+                    top: parseInt(savedScrollPosition),
+                    behavior: 'smooth'
+                });
+                sessionStorage.removeItem('modalScrollPosition');
+            }, 100);
+        }
+    }, { once: true });
+
+    modal.show();
+
+    // Fetch subcategory details
+    fetch(`/admin/categories/subcategory-details/${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                content.innerHTML = buildSubcategoryDetailsHTML(data.subcategories, categoryName, categoryColor, data.total_documents);
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        خطأ في تحميل البيانات: ${data.message}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching subcategory details:', error);
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    خطأ في الاتصال بالخادم
+                </div>
+            `;
+        });
+}
+
+function buildSubcategoryDetailsHTML(subcategories, categoryName, categoryColor, totalDocuments) {
+    if (!subcategories || subcategories.length === 0) {
+        return `
+            <div class="text-center text-muted p-4" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;">
+                <i class="fas fa-folder-open fa-3x mb-3" style="color: #bdc3c7;"></i>
+                <h5 style="font-weight: 600; color: #34495e; margin-bottom: 10px;">لا توجد فئات فرعية</h5>
+                <p style="font-size: 14px; color: #7f8c8d; font-weight: 400;">هذه الفئة لا تحتوي على فئات فرعية</p>
+            </div>
+        `;
+    }
+
+    // Count direct children and all subcategories
+    const directChildren = subcategories.filter(sub => sub.is_direct_child).length;
+    const allSubcategories = subcategories.length;
+
+    let html = `
+        <div class="mb-2">
+            <div class="alert alert-info py-2" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;">
+                <div class="row text-center">
+                    <div class="col-6 col-md-3 mb-1">
+                        <strong style="font-size: 1.2rem; color: #2c3e50; font-weight: 700;">${directChildren}</strong><br>
+                        <small style="font-size: 11px; font-weight: 500; color: #34495e;">فئة مباشرة</small>
+                    </div>
+                    <div class="col-6 col-md-3 mb-1">
+                        <strong style="font-size: 1.2rem; color: #2c3e50; font-weight: 700;">${allSubcategories}</strong><br>
+                        <small style="font-size: 11px; font-weight: 500; color: #34495e;">إجمالي الفئات</small>
+                    </div>
+                    <div class="col-6 col-md-3 mb-1">
+                        <strong style="font-size: 1.2rem; color: #2c3e50; font-weight: 700;">${totalDocuments}</strong><br>
+                        <small style="font-size: 11px; font-weight: 500; color: #34495e;">إجمالي الوثائق</small>
+                    </div>
+                    <div class="col-6 col-md-3 mb-1">
+                        <strong style="font-size: 1.2rem; color: #2c3e50; font-weight: 700;">${allSubcategories > 0 ? (totalDocuments / allSubcategories).toFixed(1) : 0}</strong><br>
+                        <small style="font-size: 11px; font-weight: 500; color: #34495e;">متوسط/فئة</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+    `;
+
+    subcategories.forEach((subcategory, index) => {
+        const percentage = totalDocuments > 0 ? (subcategory.documents / totalDocuments * 100) : 0;
+        const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#fd7e14', '#6f42c1'];
+        const color = subcategory.color_hex || subcategory.color || colors[index % colors.length];
+
+        // Different styling based on level
+        const levelClass = subcategory.level > 1 ? 'border-start border-3' : '';
+        const levelBadge = subcategory.level > 1 ? `<span class="badge bg-secondary ms-2" style="font-size: 0.75rem; font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-weight: 600;">مستوى ${subcategory.level}</span>` : '';
+        const cardOpacity = subcategory.level > 1 ? '0.9' : '1';
+
+        html += `
+            <div class="col-lg-4 col-md-6 mb-2">
+                <div class="card h-100 ${levelClass}" style="border-left: 3px solid ${color}; opacity: ${cardOpacity};">
+                    <div class="card-body p-2">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="me-2" style="width: 28px; height: 28px; border-radius: 50%; background-color: ${color}20; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas ${subcategory.level > 1 ? 'fa-folder-open' : 'fa-folder'}" style="color: ${color}; font-size: 12px;"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0" style="font-size: 13px; line-height: 1.2; font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-weight: 600; color: #2c3e50;">
+                                    ${subcategory.name}
+                                    ${levelBadge}
+                                </h6>
+                                ${subcategory.path ? `<small class="text-muted" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-size: 10px; line-height: 1;">${subcategory.path}</small>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <h5 class="mb-0" style="color: ${color}; font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-weight: 700; font-size: 1.1rem;">${subcategory.documents}</h5>
+                            <small class="text-muted" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-size: 11px; font-weight: 500;">وثيقة</small>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px; border-radius: 6px;">
+                            <div class="progress-bar"
+                                 style="background-color: ${color}; width: ${percentage}%; border-radius: 6px;">
+                            </div>
+                        </div>
+                        <div class="text-center mt-1">
+                            <small class="text-muted" style="font-family: 'Cairo', 'Noto Sans Arabic', sans-serif; font-size: 10px; font-weight: 500;">
+                                ${percentage.toFixed(1)}%
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+// Function to clean up all modals
+function cleanupModals() {
+    // Remove all modal backdrops with smooth transition
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.style.transition = 'opacity 0.3s ease';
+        backdrop.style.opacity = '0';
+        setTimeout(() => {
+            if (backdrop.parentNode) {
+                backdrop.remove();
+            }
+        }, 300);
+    });
+
+    // Restore body classes and styles smoothly
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+
+    // Dispose all modal instances
+    document.querySelectorAll('.modal').forEach(modalElement => {
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.dispose();
+        }
+
+        // Clear modal content
+        const content = modalElement.querySelector('#subcategoryContent');
+        if (content) {
+            content.innerHTML = '';
+        }
+    });
+
+    // No page refresh needed - everything is cleaned up properly
+}
+
+// Function to close modal smoothly
+function closeModalAndRefresh() {
+    const modalElement = document.getElementById('subcategoryModal');
+    const content = document.getElementById('subcategoryContent');
+
+    // Add smooth fade out effect
+    if (content) {
+        content.style.transition = 'opacity 0.3s ease';
+        content.style.opacity = '0';
+
+        setTimeout(() => {
+            content.innerHTML = '';
+            content.style.opacity = '1';
+        }, 300);
+    }
+
+    // Hide modal smoothly
+    if (modalElement) {
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+    }
+
+    // Clean up without page refresh
+    setTimeout(() => {
+        cleanupModals();
+    }, 400);
+}
+
+// Initialize tree view when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    buildTreeView();
+
+    // Add event listeners for subcategory details buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.subcategory-details-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const btn = e.target.closest('.subcategory-details-btn');
+            const categoryId = btn.dataset.categoryId;
+            const categoryName = btn.dataset.categoryName;
+            const categoryColor = btn.dataset.categoryColor;
+
+            showSubcategoryDetails(categoryId, categoryName, categoryColor);
+        }
+    });
+
+    // Add event listeners for clickable category cards
+    document.addEventListener('click', function(e) {
+        const clickableCard = e.target.closest('.clickable-category-card');
+        if (clickableCard) {
+            // Don't trigger if clicking on the button itself
+            if (e.target.closest('.subcategory-details-btn')) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const categoryId = clickableCard.dataset.categoryId;
+            const categoryName = clickableCard.dataset.categoryName;
+            const categoryColor = clickableCard.dataset.categoryColor;
+
+            showSubcategoryDetails(categoryId, categoryName, categoryColor);
+        }
+    });
+
+    // Add global modal cleanup on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modalElement = document.getElementById('subcategoryModal');
+            if (modalElement && modalElement.classList.contains('show')) {
+                // Just hide the modal, let Bootstrap handle the cleanup
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+        }
+    });
+
+    // Add cleanup when clicking outside modals
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-backdrop')) {
+            const modalElement = document.getElementById('subcategoryModal');
+            if (modalElement && modalElement.classList.contains('show')) {
+                // Just hide the modal, let Bootstrap handle the cleanup
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+        }
+    });
+
+    // Wait a bit for Chart.js to load
+    setTimeout(function() {
+        console.log('Initializing chart...');
+        initializeChart();
+    }, 100);
+
+    // Add hover effects to tree nodes
+    document.addEventListener('mouseenter', function(e) {
+        if (e.target.closest('.tree-node')) {
+            e.target.closest('.tree-node').style.transform = 'translateY(-2px)';
+        }
+    }, true);
+
+    document.addEventListener('mouseleave', function(e) {
+        if (e.target.closest('.tree-node')) {
+            e.target.closest('.tree-node').style.transform = 'translateY(0)';
+        }
+    }, true);
+
+    // Scroll to specific category if returning from documents page
+    const urlHash = window.location.hash;
+    if (urlHash && urlHash.startsWith('#category-')) {
+        const categoryId = urlHash.replace('#category-', '');
+
+        // Remove hash from URL immediately to prevent re-highlighting on refresh
+        if (history.replaceState) {
+            history.replaceState(null, null, window.location.pathname + window.location.search);
+        } else {
+            // Fallback for older browsers
+            window.location.hash = '';
+        }
+
+        // Wait for the page to fully load and trees to be built
+        setTimeout(() => {
+            // Try to find the category element in the main tree
+            const categoryElement = document.querySelector(`[data-category-id="${categoryId}"]`);
+            if (categoryElement) {
+                // Scroll to the element with smooth behavior
+                categoryElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                // Add a highlight effect
+                categoryElement.style.backgroundColor = '#fff3cd';
+                categoryElement.style.border = '2px solid #ffc107';
+                categoryElement.style.borderRadius = '5px';
+                categoryElement.style.transition = 'all 0.3s ease';
+                categoryElement.style.boxShadow = '0 4px 12px rgba(255, 193, 7, 0.3)';
+
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                    categoryElement.style.backgroundColor = '';
+                    categoryElement.style.border = '';
+                    categoryElement.style.borderRadius = '';
+                    categoryElement.style.boxShadow = '';
+                }, 3000);
+            }
+        }, 500);
+    }
+});
+</script>
+
+<style>
+.category-tree {
+    font-family: 'Noto Sans Arabic', Arial, sans-serif;
+}
+
+.category-node {
+    transition: background-color 0.2s ease;
+}
+
+.category-node:hover {
+    background-color: #f8f9fa;
+}
+
+/* Category Statistics Cards */
+.category-stat-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Clickable category cards */
+.clickable-category-card {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.clickable-category-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    border-color: #007bff !important;
+}
+
+.clickable-category-card:hover .category-name {
+    color: #007bff;
+}
+
+.clickable-category-card:hover .fas.fa-chart-pie {
+    color: #007bff !important;
+    transform: scale(1.2);
+}
+
+.clickable-category-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(0,123,255,0.05), rgba(0,123,255,0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 10px;
+    pointer-events: none;
+}
+
+.clickable-category-card:hover::before {
+    opacity: 1;
+}
+
+.category-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.category-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+/* Subcategory Details Modal */
+.subcategory-details-btn {
+    transition: all 0.3s ease;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.subcategory-details-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Modal subcategory cards */
+.modal .card {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    min-height: 120px;
+}
+
+.modal .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Compact modal cards */
+.modal .card-body {
+    padding: 0.5rem !important;
+}
+
+.modal .card h6 {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+}
+
+.modal .card h5 {
+    font-size: 1.1rem !important;
+}
+
+.modal .card small {
+    font-size: 10px !important;
+}
+
+.modal .progress {
+    height: 4px !important;
+}
+
+/* Responsive adjustments for modal */
+@media (max-width: 768px) {
+    .modal .card {
+        min-height: 100px;
+    }
+
+    .modal .card h6 {
+        font-size: 12px !important;
+    }
+
+    .modal .card h5 {
+        font-size: 1rem !important;
+    }
+}
+
+/* Modal fixes */
+.modal {
+    z-index: 1055;
+}
+
+.modal-backdrop {
+    z-index: 1050;
+    transition: opacity 0.3s ease !important;
+}
+
+/* Ensure modal is properly positioned */
+.modal.show {
+    display: block !important;
+}
+
+.modal.fade.show {
+    opacity: 1;
+}
+
+.modal.fade {
+    transition: opacity 0.3s ease !important;
+}
+
+/* Fix for modal scroll issues */
+body.modal-open {
+    overflow: hidden;
+    padding-right: 0 !important;
+    transition: padding-right 0.3s ease;
+}
+
+/* Smooth transitions for modal content */
+.modal-content {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease;
+}
+
+/* Prevent page jump during modal operations */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    transition: padding-right 0.3s ease;
+}
+
+.progress {
+    border-radius: 10px;
+    background-color: #f8f9fa;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
+}
+
+/* Chart styles */
+.chart-container {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 400px;
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.chart-controls .btn {
+    border-radius: 20px;
+    font-size: 12px;
+    padding: 5px 15px;
+    transition: all 0.3s ease;
+}
+
+.chart-controls .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#mainCategoriesChart {
+    max-height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .category-stat-card {
+        margin-bottom: 15px;
+    }
+
+    .chart-wrapper {
+        height: 300px;
+    }
+
+    .category-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+    }
+}
+
+/* Animation for cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.category-stat-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.category-stat-card:nth-child(1) { animation-delay: 0.1s; }
+.category-stat-card:nth-child(2) { animation-delay: 0.2s; }
+.category-stat-card:nth-child(3) { animation-delay: 0.3s; }
+.category-stat-card:nth-child(4) { animation-delay: 0.4s; }
+</style>
+{% endblock %}

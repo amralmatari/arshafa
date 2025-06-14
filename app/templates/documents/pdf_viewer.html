@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}عارض PDF - {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="mb-0">{{ document.title }}</h4>
+                    {% if pdf_info %}
+                    <small class="text-muted">
+                        <i class="fas fa-file-pdf me-1"></i>
+                        {{ pdf_info.pages }} صفحة
+                        • {{ pdf_info.size_mb }} ميجابايت
+                    </small>
+                    {% endif %}
+                </div>
+                <div>
+                    <a href="{{ url_for('documents.view_document', id=document.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        العودة
+                    </a>
+                    <a href="{{ url_for('documents.download_document', id=document.id) }}" class="btn btn-success">
+                        <i class="fas fa-download me-1"></i>
+                        تنزيل
+                    </a>
+                </div>
+            </div>
+            
+            <!-- PDF Viewer -->
+            <div class="card">
+                <div class="card-body p-0">
+                    <iframe src="{{ url_for('documents.preview_document', id=document.id) }}" 
+                            width="100%" 
+                            height="800px" 
+                            style="border: none;">
+                        <p>متصفحك لا يدعم عرض ملفات PDF. يمكنك 
+                           <a href="{{ url_for('documents.download_document', id=document.id) }}">تنزيل الملف</a> 
+                           لعرضه.
+                        </p>
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle iframe load errors
+    const iframe = document.querySelector('iframe');
+    iframe.addEventListener('error', function() {
+        console.log('Error loading PDF in iframe');
+        // Could show alternative viewer or download link
+    });
+});
+</script>
+{% endblock %}

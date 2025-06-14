@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل الدور - {{ role.description }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-edit me-2"></i>
+                    تعديل الدور: {{ role.description }}
+                </h2>
+                <div>
+                    <a href="{{ url_for('admin.role_detail', role_id=role.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة لتفاصيل الدور
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if role.name == 'super_admin' %}
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>تحذير:</strong> لا يمكن تعديل دور مدير النظام الرئيسي لأسباب أمنية.
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <form method="POST" action="{{ url_for('admin.edit_role', role_id=role.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div class="row">
+                <!-- Role Basic Info -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات الدور الأساسية
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">اسم الدور</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ role.name }}" readonly>
+                                <div class="form-text">لا يمكن تغيير اسم الدور</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">وصف الدور *</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="3" required>{{ role.description }}</textarea>
+                                <div class="form-text">وصف مفصل لهذا الدور ومسؤولياته</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">نوع الدور</label>
+                                <div>
+                                    {% if role.is_default %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>
+                                            دور افتراضي
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-cog me-1"></i>
+                                            دور مخصص
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">معرف الدور</label>
+                                <div>
+                                    <span class="badge bg-info">
+                                        #{{ role.id }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Permissions -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                صلاحيات الدور
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                    <label class="form-check-label fw-bold" for="selectAll">
+                                        تحديد/إلغاء تحديد جميع الصلاحيات
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                {% set permission_groups = {
+                                    'documents': {
+                                        'title': 'إدارة الوثائق',
+                                        'icon': 'file-alt',
+                                        'color': 'primary',
+                                        'permissions': ['view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'view_confidential_documents']
+                                    },
+                                    'categories': {
+                                        'title': 'إدارة الفئات',
+                                        'icon': 'folder',
+                                        'color': 'info',
+                                        'permissions': ['manage_categories']
+                                    },
+                                    'users': {
+                                        'title': 'إدارة المستخدمين',
+                                        'icon': 'users',
+                                        'color': 'warning',
+                                        'permissions': ['manage_users', 'manage_roles']
+                                    },
+                                    'system': {
+                                        'title': 'إدارة النظام',
+                                        'icon': 'cog',
+                                        'color': 'danger',
+                                        'permissions': ['manage_system', 'view_audit_logs', 'backup_system', 'restore_system']
+                                    }
+                                } %}
+
+                                {% for group_key, group in permission_groups.items() %}
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card border-{{ group.color }}">
+                                            <div class="card-header bg-{{ group.color }} text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-{{ group.icon }} me-2"></i>
+                                                    {{ group.title }}
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                {% for permission in permissions %}
+                                                    {% if permission.name in group.permissions %}
+                                                        <div class="form-check mb-2">
+                                                            <input class="form-check-input permission-checkbox" 
+                                                                   type="checkbox" 
+                                                                   name="permissions" 
+                                                                   value="{{ permission.id }}" 
+                                                                   id="perm_{{ permission.id }}"
+                                                                   {% if permission in role.permissions %}checked{% endif %}>
+                                                            <label class="form-check-label" for="perm_{{ permission.id }}">
+                                                                <strong>{{ permission.description }}</strong>
+                                                                <br>
+                                                                <small class="text-muted">{{ permission.name }}</small>
+                                                            </label>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Other permissions not in groups -->
+                            {% set grouped_permissions = [] %}
+                            {% for group in permission_groups.values() %}
+                                {% set _ = grouped_permissions.extend(group.permissions) %}
+                            {% endfor %}
+
+                            {% set other_permissions = [] %}
+                            {% for permission in permissions %}
+                                {% if permission.name not in grouped_permissions %}
+                                    {% set _ = other_permissions.append(permission) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if other_permissions %}
+                                <div class="col-12 mb-4">
+                                    <div class="card border-secondary">
+                                        <div class="card-header bg-secondary text-white">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-ellipsis-h me-2"></i>
+                                                صلاحيات أخرى
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                {% for permission in other_permissions %}
+                                                    <div class="col-md-6 mb-2">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input permission-checkbox" 
+                                                                   type="checkbox" 
+                                                                   name="permissions" 
+                                                                   value="{{ permission.id }}" 
+                                                                   id="perm_{{ permission.id }}"
+                                                                   {% if permission in role.permissions %}checked{% endif %}>
+                                                            <label class="form-check-label" for="perm_{{ permission.id }}">
+                                                                <strong>{{ permission.description }}</strong>
+                                                                <br>
+                                                                <small class="text-muted">{{ permission.name }}</small>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-save me-2"></i>
+                                        حفظ التغييرات
+                                    </button>
+                                    <a href="{{ url_for('admin.role_detail', role_id=role.id) }}" 
+                                       class="btn btn-secondary btn-lg ms-2">
+                                        <i class="fas fa-times me-2"></i>
+                                        إلغاء
+                                    </a>
+                                </div>
+                                <div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        سيتم تطبيق التغييرات على جميع المستخدمين الذين لديهم هذا الدور
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
+    
+    // Select/Deselect all functionality
+    selectAllCheckbox.addEventListener('change', function() {
+        permissionCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+    
+    // Update select all checkbox based on individual checkboxes
+    permissionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checkedCount = document.querySelectorAll('.permission-checkbox:checked').length;
+            const totalCount = permissionCheckboxes.length;
+            
+            selectAllCheckbox.checked = checkedCount === totalCount;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+        });
+    });
+    
+    // Initialize select all checkbox state
+    const checkedCount = document.querySelectorAll('.permission-checkbox:checked').length;
+    const totalCount = permissionCheckboxes.length;
+    selectAllCheckbox.checked = checkedCount === totalCount;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+    
+    // Form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const checkedPermissions = document.querySelectorAll('.permission-checkbox:checked').length;
+            
+            if (checkedPermissions === 0) {
+                e.preventDefault();
+                alert('يجب تحديد صلاحية واحدة على الأقل للدور');
+                return false;
+            }
+            
+            // Confirm changes
+            if (!confirm('هل أنت متأكد من حفظ التغييرات؟ سيتم تطبيقها على جميع المستخدمين الذين لديهم هذا الدور.')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

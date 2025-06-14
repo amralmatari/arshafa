@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة الأدوار{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-user-tag me-2"></i>
+                    إدارة الأدوار والصلاحيات
+                </h2>
+                {% if request.args.get('from') == 'admin_dashboard' %}
+                <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة إلى لوحة التحكم
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for role in roles %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-{{ 'warning' if role.name == 'super_admin' else 'primary' }} text-{{ 'dark' if role.name == 'super_admin' else 'white' }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                {% if role.name == 'super_admin' %}
+                                    <i class="fas fa-crown me-2"></i>
+                                {% elif role.name == 'admin' %}
+                                    <i class="fas fa-user-shield me-2"></i>
+                                {% elif role.name == 'manager' %}
+                                    <i class="fas fa-user-tie me-2"></i>
+                                {% elif role.name == 'editor' %}
+                                    <i class="fas fa-user-edit me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-user me-2"></i>
+                                {% endif %}
+                                {{ translate_role_name(role.name) }}
+                            </h5>
+                            {% if role.is_default %}
+                                <span class="badge bg-light text-dark">افتراضي</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            <strong>اسم الدور:</strong>
+                            <span class="fw-bold text-primary">{{ translate_role_name(role.name) }}</span>
+                            <br>
+                            <small class="text-muted">({{ role.name }})</small>
+                        </p>
+                        
+                        <div class="mb-3">
+                            <strong>عدد الصلاحيات:</strong>
+                            <span class="badge bg-info">{{ role.permissions|length if role.permissions else 0 }}</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>المستخدمون:</strong>
+                            {% set users_count = role.users|length if role.users else 0 %}
+                            <span class="badge bg-success">{{ users_count }} مستخدم</span>
+                        </div>
+                        
+                        {% if role.permissions %}
+                            <div class="mb-3">
+                                <strong>الصلاحيات الرئيسية:</strong>
+                                <div class="mt-2">
+                                    {% for permission in role.permissions[:3] %}
+                                        <span class="badge bg-secondary me-1 mb-1">{{ translate_permission_name(permission.name) }}</span>
+                                    {% endfor %}
+                                    {% if role.permissions|length > 3 %}
+                                        <span class="badge bg-light text-dark">+{{ role.permissions|length - 3 }} أخرى</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('admin.role_detail', role_id=role.id) }}" 
+                               class="btn btn-outline-primary btn-sm flex-fill">
+                                <i class="fas fa-eye me-1"></i>
+                                عرض
+                            </a>
+                            {% if role.name != 'super_admin' %}
+                                <a href="{{ url_for('admin.edit_role', role_id=role.id) }}" 
+                                   class="btn btn-outline-success btn-sm flex-fill">
+                                    <i class="fas fa-edit me-1"></i>
+                                    تعديل
+                                </a>
+                            {% else %}
+                                <button class="btn btn-outline-secondary btn-sm flex-fill" disabled>
+                                    <i class="fas fa-lock me-1"></i>
+                                    محمي
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Permissions Overview -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key me-2"></i>
+                        ملخص الصلاحيات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>الصلاحية</th>
+                                    {% for role in roles %}
+                                        <th class="text-center">{{ translate_role_name(role.name) }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set all_permissions = [] %}
+                                {% for role in roles %}
+                                    {% for permission in role.permissions %}
+                                        {% if permission not in all_permissions %}
+                                            {% set _ = all_permissions.append(permission) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                                
+                                {% for permission in all_permissions %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ translate_permission_name(permission.name) }}</strong>
+                                            <br><small class="text-muted">{{ permission.name }}</small>
+                                        </td>
+                                        {% for role in roles %}
+                                            <td class="text-center">
+                                                {% if permission in role.permissions %}
+                                                    <i class="fas fa-check-circle text-success"></i>
+                                                {% else %}
+                                                    <i class="fas fa-times-circle text-muted"></i>
+                                                {% endif %}
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

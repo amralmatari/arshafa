@@ -1,0 +1,1213 @@
+{% extends "base.html" %}
+{% set title = "قائمة الوثائق" %}
+
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+    /* تحسين مظهر زر التبديل */
+    .filter-toggle-btn {
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+
+    .filter-toggle-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    /* تحسين مظهر قسم الترتيب */
+    .sort-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-top: 1px solid #dee2e6;
+    }
+
+    .btn-group .btn {
+        margin: 2px;
+        border-radius: 20px !important;
+    }
+
+    /* تحسين مظهر البطاقات */
+    .document-card {
+        transition: transform 0.2s;
+    }
+    .document-card:hover {
+        transform: translateY(-2px);
+    }
+    .status-badge {
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-file-alt me-2"></i>
+            قائمة الوثائق
+        </h1>
+        <!-- Toggle Button for Filters -->
+        <button class="btn btn-outline-secondary btn-sm filter-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#filtersSection" aria-expanded="true" aria-controls="filtersSection">
+            <i class="fas fa-filter me-1"></i>
+            <span id="filter-toggle-text">إخفاء الفلاتر</span>
+            <i class="fas fa-chevron-up ms-1" id="filter-toggle-icon"></i>
+        </button>
+    </div>
+
+    <!-- Collapsible Filters and Sort Section -->
+    <div class="collapse show" id="filtersSection">
+        <!-- Filter Form -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>
+                    فلاتر البحث والتصفية
+                </h6>
+                <div class="d-flex gap-1">
+                    <button type="submit" form="filter-form" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search me-1"></i>
+                        بحث وتصفية
+                    </button>
+                    {% if current_search or current_main_category or current_sub_category_1 or current_sub_category_2 or current_sub_category_3 or current_doc_type or current_author or current_start_date or current_end_date or current_time_filter %}
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearAllFilters()">
+                        <i class="fas fa-times me-1"></i>
+                        إلغاء الكل
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        <div class="card-body py-3">
+            <form method="get" action="{{ url_for('documents.list_documents') }}" id="filter-form" onsubmit="return true;">
+
+                <!-- الصف الأول: عنوان التصفية حسب الفئة وفلاتر التواريخ -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-primary mb-2">
+                            <i class="fas fa-sitemap me-1"></i>
+                            تصفية حسب الفئة
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex flex-grow-1 align-items-center gap-4">
+                            
+                            <!-- مجموعة الفلاتر الزمنية -->
+                            <div class="d-flex gap-2 align-items-center">
+                                <!-- فلتر زمني سريع -->
+                                <div class="d-flex filter-toggle-text align-items-center">
+                                    <label for="time_filter" class="form-label mb-1 text-muted small text-center">
+                                        🕰️ فلاتر زمنية 
+                                    </label>
+                                    <select name="time_filter" id="time_filter" class="form-select form-select-sm border-primary"
+                                            style="width: 120px; font-size: 0.85rem;" onchange="this.form.submit()">
+                                        <option value="" {% if not current_time_filter %}selected{% endif %}>
+                                            📅 اختر الفترة
+                                        </option>
+                                        <option value="daily" {% if current_time_filter == 'daily' %}selected{% endif %}>
+                                            🌅 يومي (اليوم)
+                                        </option>
+                                        <option value="monthly" {% if current_time_filter == 'monthly' %}selected{% endif %}>
+                                            📅 شهري (هذا الشهر)
+                                        </option>
+                                        <option value="yearly" {% if current_time_filter == 'yearly' %}selected{% endif %}>
+                                            �️ سنوي (هذه السنة)
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- خط فاصل -->
+                                <div class="vr" style="height: 40px; opacity: 0.3;"></div>
+
+                                <!-- فلاتر التواريخ المخصصة -->
+                                <div class="d-flex gap-2">
+                                    <div class="d-flex filter-toggle-text align-items-center">
+                                        <label for="start_date" class="form-label mb-1 text-muted small">
+                                            📅 من 
+                                        </label>
+                                        <input type="date" name="start_date" id="start_date" class="form-control form-control-sm"
+                                               style="width: 140px; font-size: 0.85rem;" value="{{ current_start_date or '' }}">
+                                    </div>
+                                    <div class="d-flex flex-grow-1 align-items-center">
+                                        <label for="end_date" class="form-label mb-1 text-muted small">
+                                            📅 إلى 
+                                        </label>
+                                        <input type="date" name="end_date" id="end_date" class="form-control form-control-sm"
+                                               style="width: 140px; font-size: 0.85rem;" value="{{ current_end_date or '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <!-- Main Category -->
+                    <div class="col-lg-3 col-md-6 mb-2">
+                        <select name="main_category" id="main_category" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">📁 جميع الفئات</option>
+                            {% for category in main_categories %}
+                            <option value="{{ category.id }}" {% if current_main_category == category.id %}selected{% endif %}>
+                                📂 {{ category.get_display_name() }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Sub Category 1 -->
+                    <div class="col-lg-3 col-md-6 mb-2">
+                        <select name="sub_category_1" id="sub_category_1" class="form-select form-select-sm" disabled onchange="this.form.submit()">
+                            <option value="">📁 اختر فئة فرعية</option>
+                        </select>
+                    </div>
+
+                    <!-- Sub Category 2 -->
+                    <div class="col-lg-3 col-md-6 mb-2">
+                        <select name="sub_category_2" id="sub_category_2" class="form-select form-select-sm" disabled onchange="this.form.submit()">
+                            <option value="">📁 اختر فئة فرعية ثانية</option>
+                        </select>
+                    </div>
+
+                    <!-- Sub Category 3 -->
+                    <div class="col-lg-3 col-md-6 mb-2">
+                        <select name="sub_category_3" id="sub_category_3" class="form-select form-select-sm" disabled onchange="this.form.submit()">
+                            <option value="">📁 اختر فئة فرعية ثالثة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- الصف الثاني: البحث وفلاتر نوع الوثيقة والمؤلف -->
+                <div class="row mb-3">
+                    <!-- Search Field -->
+                    <div class="col-lg-4 col-md-6 mb-2">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-1">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text"
+                                   name="search"
+                                   id="search"
+                                   class="form-control form-control-sm border-start-1"
+                                   placeholder="ابحث في الوثائق..."
+                                   value="{{ current_search or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Document Type Filter -->
+                    <div class="col-lg-4 col-md-6 mb-2">
+                        <select name="doc_type" id="doc_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="" {% if not current_doc_type or current_doc_type == '' %}selected{% endif %}>
+                                📄 جميع أنواع الوثائق
+                            </option>
+                            {% for doc_type in doc_types %}
+                            <option value="{{ doc_type.value }}"
+                                    {% if current_doc_type and current_doc_type != '' and current_doc_type != 'None' and (current_doc_type == doc_type.value or current_doc_type in doc_type.extensions) %}selected{% endif %}>
+                                {{ doc_type.display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Author Filter -->
+                    <div class="col-lg-4 col-md-6 mb-2">
+                        <select name="author" id="author" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">👥 جميع المؤلفين</option>
+                            {% for author in authors %}
+                            <option value="{{ author.id }}" {% if current_author == author.id %}selected{% endif %}>
+                                {% if author.first_name and author.last_name %}
+                                    👤 {{ author.first_name }} {{ author.last_name }}
+                                {% else %}
+                                    👤 {{ author.username }}
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+
+
+
+            </form>
+        </div>
+
+        <!-- Sort Options -->
+        <div class="card-footer sort-section">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-sort me-2"></i>
+                        ترتيب الوثائق
+                    </h6>
+                </div>
+                <div class="col-md-9">
+                    <div class="btn-group flex-wrap" role="group" aria-label="خيارات الترتيب">
+                <a href="{{ url_for('documents.list_documents',
+                    search=current_search,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    sort='newest') }}"
+                   class="btn btn-outline-primary btn-sm {{ 'active' if request.args.get('sort', 'newest') == 'newest' else '' }}">
+                    <i class="fas fa-clock me-1"></i>
+                    الأحدث
+                </a>
+                <a href="{{ url_for('documents.list_documents',
+                    search=current_search,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    sort='file_type') }}"
+                   class="btn btn-outline-primary btn-sm {{ 'active' if request.args.get('sort') == 'file_type' else '' }}">
+                    <i class="fas fa-file me-1"></i>
+                    نوع الوثيقة
+                </a>
+                <a href="{{ url_for('documents.list_documents',
+                    search=current_search,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    sort='status') }}"
+                   class="btn btn-outline-primary btn-sm {{ 'active' if request.args.get('sort') == 'status' else '' }}">
+                    <i class="fas fa-flag me-1"></i>
+                    الحالة
+                </a>
+                <a href="{{ url_for('documents.list_documents',
+                    search=current_search,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    sort='author') }}"
+                   class="btn btn-outline-primary btn-sm {{ 'active' if request.args.get('sort') == 'author' else '' }}">
+                    <i class="fas fa-user me-1"></i>
+                    المؤلف
+                </a>
+                <a href="{{ url_for('documents.list_documents',
+                    search=current_search,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    sort='title') }}"
+                   class="btn btn-outline-primary btn-sm {{ 'active' if request.args.get('sort') == 'title' else '' }}">
+                    <i class="fas fa-sort-alpha-down me-1"></i>
+                    العنوان
+                </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- End of collapsible section -->
+
+    <!-- Active Filters Display -->
+    {% set active_filters = [] %}
+    {% if current_search %}
+        {% set _ = active_filters.append(('البحث', current_search)) %}
+    {% endif %}
+
+    <!-- Hierarchical Category Filters -->
+    {% if current_main_category %}
+        {% for category in main_categories %}
+            {% if category.id == current_main_category %}
+                {% set _ = active_filters.append(('الفئة الرئيسية', category.get_display_name())) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if current_sub_category_1 %}
+        {% for category in categories %}
+            {% if category.id == current_sub_category_1 %}
+                {% set _ = active_filters.append(('الفئة الفرعية الأولى', category.get_display_name())) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if current_sub_category_2 %}
+        {% for category in categories %}
+            {% if category.id == current_sub_category_2 %}
+                {% set _ = active_filters.append(('الفئة الفرعية الثانية', category.get_display_name())) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if current_sub_category_3 %}
+        {% for category in categories %}
+            {% if category.id == current_sub_category_3 %}
+                {% set _ = active_filters.append(('الفئة الفرعية الثالثة', category.get_display_name())) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if current_doc_type %}
+        {% set doc_type_display = current_doc_type.upper() %}
+        {% for doc_type in doc_types %}
+            {% if doc_type.value == current_doc_type or current_doc_type in doc_type.extensions %}
+                {% set doc_type_display = doc_type.display %}
+            {% endif %}
+        {% endfor %}
+        {% set _ = active_filters.append(('نوع الوثيقة', doc_type_display)) %}
+    {% endif %}
+
+    {% if current_author %}
+        {% for author in authors %}
+            {% if author.id == current_author %}
+                {% set author_name = (author.first_name + ' ' + author.last_name) if author.first_name and author.last_name else author.username %}
+                {% set _ = active_filters.append(('المؤلف', author_name)) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if current_time_filter %}
+        {% if current_time_filter == 'daily' %}
+            {% set _ = active_filters.append(('الفلتر الزمني', 'يومي')) %}
+        {% elif current_time_filter == 'monthly' %}
+            {% set _ = active_filters.append(('الفلتر الزمني', 'شهري')) %}
+        {% elif current_time_filter == 'yearly' %}
+            {% set _ = active_filters.append(('الفلتر الزمني', 'سنوي')) %}
+        {% endif %}
+    {% elif current_start_date or current_end_date %}
+        {% if current_start_date and current_end_date %}
+            {% set _ = active_filters.append(('الفلتر الزمني', 'من ' + current_start_date + ' إلى ' + current_end_date)) %}
+        {% elif current_start_date %}
+            {% set _ = active_filters.append(('الفلتر الزمني', 'من ' + current_start_date)) %}
+        {% elif current_end_date %}
+            {% set _ = active_filters.append(('الفلتر الزمني', 'حتى ' + current_end_date)) %}
+        {% endif %}
+    {% endif %}
+
+    {% if active_filters %}
+    <div class="alert alert-info mb-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap">
+            <div class="mb-2 mb-md-0 flex-grow-1">
+                <i class="fas fa-filter me-2 text-info"></i>
+                <strong>الفلاتر النشطة:</strong>
+                <div class="d-inline-block ms-2">
+                    {% for filter_name, filter_value in active_filters %}
+                        {% if filter_name == 'البحث' %}
+                            <span class="badge bg-primary me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('search')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'الفئة الرئيسية' %}
+                            <span class="badge bg-success me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('main_category')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'الفئة الفرعية الأولى' %}
+                            <span class="badge bg-info me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('sub_category_1')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'الفئة الفرعية الثانية' %}
+                            <span class="badge bg-warning me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('sub_category_2')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'الفئة الفرعية الثالثة' %}
+                            <span class="badge bg-secondary me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('sub_category_3')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'نوع الوثيقة' %}
+                            <span class="badge bg-dark me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('doc_type')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'المؤلف' %}
+                            <span class="badge bg-danger me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('author')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% elif filter_name == 'الفلتر الزمني' %}
+                            <span class="badge bg-dark me-1 mb-1 filter-badge" style="cursor: pointer;"
+                                  onclick="removeFilter('date')"
+                                  title="انقر لإزالة هذا الفلتر">
+                                📅 {{ filter_name }}: {{ filter_value }}
+                                <i class="fas fa-times ms-1"></i>
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <a href="{{ url_for('documents.list_documents') }}" class="btn btn-xs btn-outline-danger" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                <i class="fas fa-times me-1"></i>
+                إزالة الكل
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Return to Categories Button -->
+    {% if request.args.get('return_to') == 'admin_categories' %}
+    <div class="mb-3">
+        <a href="{{ url_for('admin.list_categories') }}{% if request.args.get('return_category_id') %}#category-{{ request.args.get('return_category_id') }}{% endif %}"
+           class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-right me-1"></i>
+            العودة إلى إدارة الفئات
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Results Summary -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="mb-0">
+                <i class="fas fa-file-alt me-2"></i>
+                قائمة الوثائق
+                {% if active_filters %}
+                    <span class="badge bg-info ms-2">
+                        <i class="fas fa-filter me-1"></i>
+                        مفلترة ({{ active_filters|length }} فلتر)
+                    </span>
+                {% endif %}
+            </h5>
+            <small class="text-muted">
+                {% if documents.total > 0 %}
+                    {% if active_filters %}
+                        <i class="fas fa-search me-1"></i>
+                        تم العثور على {{ documents.total }} وثيقة تطابق معايير البحث
+                        {% if documents.pages > 1 %}
+                            - عرض {{ documents.items|length }} وثيقة (الصفحة {{ documents.page }} من {{ documents.pages }})
+                        {% endif %}
+                    {% else %}
+                        عرض {{ documents.items|length }} من أصل {{ documents.total }} وثيقة
+                        {% if documents.pages > 1 %}
+                            (الصفحة {{ documents.page }} من {{ documents.pages }})
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    {% if active_filters %}
+                        <i class="fas fa-exclamation-triangle me-1 text-warning"></i>
+                        لا توجد وثائق تطابق معايير البحث المحددة
+                    {% else %}
+                        لا توجد وثائق
+                    {% endif %}
+                {% endif %}
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            {% if request.args.get('return_to') == 'admin_categories' %}
+            <a href="{{ url_for('admin.list_categories') }}{% if request.args.get('return_category_id') %}#category-{{ request.args.get('return_category_id') }}{% endif %}"
+               class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-1"></i>
+                العودة إلى الفئات
+            </a>
+            {% endif %}
+            <a href="{{ url_for('documents.create_document') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>
+                إضافة وثيقة جديدة
+            </a>
+        </div>
+    </div>
+
+
+
+    <!-- Bulk Actions -->
+    <div class="row mb-3" id="bulk-actions" style="display: none;">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span id="selected-count">0</span> وثيقة محددة
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-danger btn-sm" id="bulk-delete-btn">
+                                <i class="fas fa-trash me-1"></i>
+                                حذف المحدد
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-selection-btn">
+                                <i class="fas fa-times me-1"></i>
+                                إلغاء التحديد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents List -->
+    {% if documents.items %}
+    <!-- Select All Controls -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="select-all">
+                <label class="form-check-label" for="select-all">
+                    تحديد جميع الوثائق في هذه الصفحة
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for document in documents.items %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100" data-document-id="{{ document.id }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <!-- Checkbox for selection -->
+                        <div class="form-check me-2">
+                            <input class="form-check-input document-checkbox" type="checkbox"
+                                   value="{{ document.id }}" id="doc-{{ document.id }}">
+                        </div>
+                        <span class="me-2">
+                            {% if document.file_type == 'pdf' %}
+                                📄
+                            {% elif document.file_type in ['doc', 'docx'] %}
+                                📝
+                            {% elif document.file_type in ['xls', 'xlsx'] %}
+                                📊
+                            {% elif document.file_type in ['ppt', 'pptx'] %}
+                                📈
+                            {% elif document.file_type in ['jpg', 'jpeg', 'png', 'gif'] %}
+                                🖼️
+                            {% elif document.file_type == 'txt' %}
+                                📄
+                            {% else %}
+                                📎
+                            {% endif %}
+                        </span>
+                        <h5 class="mb-0">{{ document.title }}</h5>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <!-- File Type Badge -->
+                        <span class="badge bg-info">
+                            {% if document.file_type == 'pdf' %}
+                                PDF
+                            {% elif document.file_type in ['doc', 'docx'] %}
+                                Word
+                            {% elif document.file_type in ['xls', 'xlsx'] %}
+                                Excel
+                            {% elif document.file_type in ['ppt', 'pptx'] %}
+                                PowerPoint
+                            {% elif document.file_type in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff'] %}
+                                صورة
+                            {% elif document.file_type == 'txt' %}
+                                نص
+                            {% else %}
+                                {{ document.file_type.upper() if document.file_type else 'غير محدد' }}
+                            {% endif %}
+                        </span>
+                        <!-- Status Badge -->
+                        <span class="badge bg-{{ document.get_status_color() }}">
+                            {{ document.status|document_status }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ document.description|truncate(100) }}</p>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-file me-1"></i>
+                            <strong>اسم الملف:</strong> {{ document.original_filename }}
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-folder me-1"></i>
+                            {% if document.category %}
+                                {{ document.category.get_full_path() }}
+                            {% else %}
+                                غير مصنف
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>
+                            {{ document.author.get_full_name() }}
+                        </small>
+                    </div>
+                    <div>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {{ document.created_at.strftime('%Y/%m/%d') }}
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('documents.view_document', id=document.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye me-1"></i>
+                                عرض
+                            </a>
+                            <a href="{{ url_for('documents.download_document', id=document.id) }}" class="btn btn-sm btn-success">
+                                <i class="fas fa-download me-1"></i>
+                                تنزيل
+                            </a>
+                            {% if current_user.can('edit_document') or current_user.id == document.author_id %}
+                            <a href="{{ url_for('documents.edit_document', id=document.id) }}" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-edit me-1"></i>
+                                تعديل
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% if current_user.can('delete_document') or current_user.id == document.author_id %}
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-document-btn"
+                                data-document-id="{{ document.id }}"
+                                data-document-title="{{ document.title }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if documents.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('documents.list_documents',
+                    page=documents.prev_num,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    search=current_search,
+                    sort=request.args.get('sort', 'newest')) }}">
+                    السابق
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">السابق</span>
+            </li>
+            {% endif %}
+
+            {% for page_num in documents.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == documents.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('documents.list_documents',
+                            page=page_num,
+                            main_category=current_main_category,
+                            sub_category_1=current_sub_category_1,
+                            sub_category_2=current_sub_category_2,
+                            sub_category_3=current_sub_category_3,
+                            doc_type=current_doc_type,
+                            author=current_author,
+                            search=current_search,
+                            sort=request.args.get('sort', 'newest')) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if documents.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('documents.list_documents',
+                    page=documents.next_num,
+                    main_category=current_main_category,
+                    sub_category_1=current_sub_category_1,
+                    sub_category_2=current_sub_category_2,
+                    sub_category_3=current_sub_category_3,
+                    doc_type=current_doc_type,
+                    author=current_author,
+                    search=current_search,
+                    sort=request.args.get('sort', 'newest')) }}">
+                    التالي
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">التالي</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        لا توجد وثائق متاحة.
+        <a href="{{ url_for('documents.create_document') }}" class="alert-link">إضافة وثيقة جديدة</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // وظيفة زر تبديل الفلاتر
+    $('#filtersSection').on('show.bs.collapse', function () {
+        $('#filter-toggle-text').text('إخفاء الفلاتر');
+        $('#filter-toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    });
+
+    $('#filtersSection').on('hide.bs.collapse', function () {
+        $('#filter-toggle-text').text('إظهار الفلاتر');
+        $('#filter-toggle-icon').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+    });
+    // تحديد/إلغاء تحديد جميع الوثائق
+    $('#select-all').change(function() {
+        var isChecked = $(this).is(':checked');
+        $('.document-checkbox').prop('checked', isChecked);
+        updateBulkActions();
+    });
+
+    // تحديث حالة تحديد الكل عند تغيير تحديد وثيقة فردية
+    $('.document-checkbox').change(function() {
+        var totalCheckboxes = $('.document-checkbox').length;
+        var checkedCheckboxes = $('.document-checkbox:checked').length;
+
+        $('#select-all').prop('checked', checkedCheckboxes === totalCheckboxes);
+        updateBulkActions();
+    });
+
+    // تحديث عرض الإجراءات المجمعة
+    function updateBulkActions() {
+        var checkedCount = $('.document-checkbox:checked').length;
+        $('#selected-count').text(checkedCount);
+
+        if (checkedCount > 0) {
+            $('#bulk-actions').show();
+        } else {
+            $('#bulk-actions').hide();
+        }
+    }
+
+    // إلغاء التحديد
+    $('#clear-selection-btn').click(function() {
+        $('.document-checkbox').prop('checked', false);
+        $('#select-all').prop('checked', false);
+        updateBulkActions();
+    });
+
+    // حذف وثيقة واحدة
+    $('.delete-document-btn').click(function() {
+        var documentId = $(this).data('document-id');
+        var documentTitle = $(this).data('document-title');
+
+        if (confirm('هل أنت متأكد من حذف الوثيقة "' + documentTitle + '"؟\nهذا الإجراء لا يمكن التراجع عنه.')) {
+            deleteDocument(documentId);
+        }
+    });
+
+    // حذف متعدد
+    $('#bulk-delete-btn').click(function() {
+        var selectedIds = [];
+        $('.document-checkbox:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) {
+            alert('يرجى تحديد وثيقة واحدة على الأقل للحذف.');
+            return;
+        }
+
+        if (confirm('هل أنت متأكد من حذف ' + selectedIds.length + ' وثيقة؟\nهذا الإجراء لا يمكن التراجع عنه.')) {
+            bulkDeleteDocuments(selectedIds);
+        }
+    });
+
+    // دالة حذف وثيقة واحدة
+    function deleteDocument(documentId) {
+        console.log('Deleting document:', documentId);
+        $.ajax({
+            url: '/documents/ajax/delete/' + documentId,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    // إزالة البطاقة من الصفحة
+                    $('[data-document-id="' + documentId + '"]').closest('.col-md-6').fadeOut(function() {
+                        $(this).remove();
+                        updateBulkActions();
+
+                        // إذا لم تعد هناك وثائق محددة، إخفاء التنبيه والأزرار
+                        if ($('.document-checkbox:checked').length === 0) {
+                            $('#selected-count-alert').hide();
+                            $('#bulk-actions').hide();
+                        }
+                    });
+
+                    // عرض رسالة نجاح
+                    showAlert('تم حذف الوثيقة بنجاح', 'success');
+                } else {
+                    showAlert('حدث خطأ أثناء حذف الوثيقة: ' + response.message, 'danger');
+                }
+            },
+            error: function() {
+                showAlert('حدث خطأ أثناء حذف الوثيقة', 'danger');
+            }
+        });
+    }
+
+    // دالة حذف متعدد
+    function bulkDeleteDocuments(documentIds) {
+        console.log('Bulk deleting documents:', documentIds);
+
+        // إعداد البيانات للإرسال
+        var formData = new FormData();
+        documentIds.forEach(function(id) {
+            formData.append('document_ids', id);
+        });
+
+        console.log('FormData prepared, sending request...');
+
+        $.ajax({
+            url: '/documents/bulk-delete',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('meta[name=csrf-token]').attr('content')
+            },
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // إزالة البطاقات من الصفحة
+                    documentIds.forEach(function(id) {
+                        $('[data-document-id="' + id + '"]').closest('.col-md-6').fadeOut(function() {
+                            $(this).remove();
+                        });
+                    });
+
+                    // إخفاء التنبيه وأزرار الحذف المتعدد
+                    $('#selected-count-alert').hide();
+                    $('#bulk-actions').hide();
+
+                    // إعادة تعيين التحديد
+                    $('#select-all').prop('checked', false);
+                    $('.document-checkbox').prop('checked', false);
+                    updateBulkActions();
+
+                    // عرض رسالة نجاح
+                    showAlert('تم حذف ' + response.deleted_count + ' وثيقة بنجاح', 'success');
+                } else {
+                    showAlert('حدث خطأ أثناء حذف الوثائق: ' + response.message, 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Bulk delete error:', xhr, status, error);
+                console.error('Response text:', xhr.responseText);
+                showAlert('حدث خطأ أثناء حذف الوثائق: ' + error, 'danger');
+            }
+        });
+    }
+
+    // دالة عرض التنبيهات
+    function showAlert(message, type) {
+        var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                       '<i class="fas fa-' + (type === 'success' ? 'check-circle' : 'exclamation-triangle') + ' me-2"></i>' +
+                       message +
+                       '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                       '</div>';
+
+        // إضافة التنبيه في أعلى الصفحة
+        $('.container-fluid').prepend(alertHtml);
+
+        // إزالة التنبيه تلقائياً بعد 5 ثوان
+        setTimeout(function() {
+            $('.alert').fadeOut();
+        }, 5000);
+    }
+
+    // Hierarchical category filters functionality
+    const form = document.getElementById('filterForm');
+    const mainCategorySelect = document.getElementById('main_category');
+    const subCategory1Select = document.getElementById('sub_category_1');
+    const subCategory2Select = document.getElementById('sub_category_2');
+    const subCategory3Select = document.getElementById('sub_category_3');
+
+    // Function to clear and disable a select
+    function clearAndDisableSelect(select) {
+        select.innerHTML = '<option value="">📁 اختر فئة فرعية</option>';
+        select.disabled = true;
+        select.value = '';
+    }
+
+    // Function to load subcategories
+    function loadSubcategories(parentId, targetSelect, placeholder) {
+        if (!parentId) {
+            clearAndDisableSelect(targetSelect);
+            return;
+        }
+
+        // Show loading
+        targetSelect.innerHTML = '<option value="">جاري التحميل...</option>';
+        targetSelect.disabled = false;
+
+        fetch(`{{ url_for('documents.get_subcategories', parent_id=0) }}`.replace('0', parentId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    targetSelect.innerHTML = `<option value="">${placeholder}</option>`;
+                    data.subcategories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = '📂 ' + category.name;
+                        targetSelect.appendChild(option);
+                    });
+
+                    // Restore selected value if exists
+                    const currentValue = targetSelect.dataset.currentValue;
+                    if (currentValue) {
+                        targetSelect.value = currentValue;
+                        targetSelect.dataset.currentValue = '';
+                    }
+                } else {
+                    targetSelect.innerHTML = `<option value="">${placeholder}</option>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading subcategories:', error);
+                targetSelect.innerHTML = `<option value="">${placeholder}</option>`;
+            });
+    }
+
+    // Main category change handler
+    if (mainCategorySelect) {
+        mainCategorySelect.addEventListener('change', function() {
+            const selectedValue = this.value;
+
+            // Clear all subcategory selects
+            clearAndDisableSelect(subCategory1Select);
+            clearAndDisableSelect(subCategory2Select);
+            clearAndDisableSelect(subCategory3Select);
+
+            if (selectedValue) {
+                loadSubcategories(selectedValue, subCategory1Select, '📁 اختر فئة فرعية');
+            }
+
+            // Auto-submit form
+            form.submit();
+        });
+    }
+
+    // Sub category 1 change handler
+    if (subCategory1Select) {
+        subCategory1Select.addEventListener('change', function() {
+            const selectedValue = this.value;
+
+            // Clear subsequent selects
+            clearAndDisableSelect(subCategory2Select);
+            clearAndDisableSelect(subCategory3Select);
+
+            if (selectedValue) {
+                loadSubcategories(selectedValue, subCategory2Select, '📁 اختر فئة فرعية ثانية');
+            }
+
+            // Auto-submit form
+            form.submit();
+        });
+    }
+
+    // Sub category 2 change handler
+    if (subCategory2Select) {
+        subCategory2Select.addEventListener('change', function() {
+            const selectedValue = this.value;
+
+            // Clear subsequent select
+            clearAndDisableSelect(subCategory3Select);
+
+            if (selectedValue) {
+                loadSubcategories(selectedValue, subCategory3Select, '📁 اختر فئة فرعية ثالثة');
+            }
+
+            // Auto-submit form
+            form.submit();
+        });
+    }
+
+    // Sub category 3 change handler
+    if (subCategory3Select) {
+        subCategory3Select.addEventListener('change', function() {
+            // Auto-submit form
+            form.submit();
+        });
+    }
+
+    // Initialize on page load
+    const currentMainCategory = {{ current_main_category or 'null' }};
+    const currentSubCategory1 = {{ current_sub_category_1 or 'null' }};
+    const currentSubCategory2 = {{ current_sub_category_2 or 'null' }};
+    const currentSubCategory3 = {{ current_sub_category_3 or 'null' }};
+
+    if (currentMainCategory) {
+        subCategory1Select.dataset.currentValue = currentSubCategory1 || '';
+        loadSubcategories(currentMainCategory, subCategory1Select, '-- الفئة الفرعية الأولى --');
+
+        if (currentSubCategory1) {
+            subCategory2Select.dataset.currentValue = currentSubCategory2 || '';
+            loadSubcategories(currentSubCategory1, subCategory2Select, '-- الفئة الفرعية الثانية --');
+
+            if (currentSubCategory2) {
+                subCategory3Select.dataset.currentValue = currentSubCategory3 || '';
+                loadSubcategories(currentSubCategory2, subCategory3Select, '-- الفئة الفرعية الثالثة --');
+            }
+        }
+    }
+
+    // Auto-submit form when other filters change
+    const otherFilterInputs = form.querySelectorAll('#search, #doc_type, #author');
+    otherFilterInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            form.submit();
+        });
+    });
+});
+
+// Function to remove specific filter
+function removeFilter(filterType) {
+    const currentUrl = new URL(window.location);
+    const params = currentUrl.searchParams;
+
+    // Remove the specific filter parameter
+    switch(filterType) {
+        case 'search':
+            params.delete('search');
+            break;
+        case 'main_category':
+            params.delete('main_category');
+            params.delete('sub_category_1');
+            params.delete('sub_category_2');
+            params.delete('sub_category_3');
+            break;
+        case 'sub_category_1':
+            params.delete('sub_category_1');
+            params.delete('sub_category_2');
+            params.delete('sub_category_3');
+            break;
+        case 'sub_category_2':
+            params.delete('sub_category_2');
+            params.delete('sub_category_3');
+            break;
+        case 'sub_category_3':
+            params.delete('sub_category_3');
+            break;
+        case 'doc_type':
+            params.delete('doc_type');
+            break;
+        case 'author':
+            params.delete('author');
+            break;
+        case 'date':
+            params.delete('start_date');
+            params.delete('end_date');
+            params.delete('time_filter');
+            break;
+    }
+
+    // Reset page to 1 when removing filters
+    params.delete('page');
+
+    // Redirect to the new URL
+    window.location.href = currentUrl.toString();
+}
+
+// Function to clear all filters
+function clearAllFilters() {
+    // Redirect to the base URL without any parameters
+    window.location.href = '{{ url_for("documents.list_documents") }}';
+}
+
+// Add Enter key support for date filters
+document.addEventListener('DOMContentLoaded', function() {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const form = document.getElementById('filter-form');
+
+    // Add Enter key listener to date inputs
+    if (startDateInput) {
+        startDateInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    }
+
+    if (endDateInput) {
+        endDateInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    }
+
+    // Add hover effects for filter badges
+    const filterBadges = document.querySelectorAll('.filter-badge');
+
+    filterBadges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.opacity = '0.8';
+            this.style.transform = 'scale(1.05)';
+        });
+
+        badge.addEventListener('mouseleave', function() {
+            this.style.opacity = '1';
+            this.style.transform = 'scale(1)';
+        });
+    });
+});
+</script>
+
+<style>
+.filter-badge {
+    transition: all 0.2s ease-in-out;
+}
+
+.filter-badge:hover {
+    opacity: 0.8 !important;
+    transform: scale(1.05) !important;
+}
+</style>
+{% endblock %}
+
+
+
+
+

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}تفاصيل الدور - {{ role.description }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    {% if role.name == 'super_admin' %}
+                        <i class="fas fa-crown me-2 text-warning"></i>
+                    {% elif role.name == 'admin' %}
+                        <i class="fas fa-user-shield me-2 text-primary"></i>
+                    {% elif role.name == 'manager' %}
+                        <i class="fas fa-user-tie me-2 text-info"></i>
+                    {% elif role.name == 'editor' %}
+                        <i class="fas fa-user-edit me-2 text-success"></i>
+                    {% else %}
+                        <i class="fas fa-user me-2 text-secondary"></i>
+                    {% endif %}
+                    {{ role.description }}
+                </h2>
+                <div>
+                    {% if role.name != 'super_admin' %}
+                        <a href="{{ url_for('admin.edit_role', role_id=role.id) }}" class="btn btn-success me-2">
+                            <i class="fas fa-edit me-2"></i>
+                            تعديل الصلاحيات
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('admin.roles') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة للأدوار
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Role Info -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات الدور
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>اسم الدور:</strong><br>
+                        <span class="text-muted">{{ role.name }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>الوصف:</strong><br>
+                        <span class="text-muted">{{ role.description }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>نوع الدور:</strong><br>
+                        {% if role.is_default %}
+                            <span class="badge bg-success">افتراضي</span>
+                        {% else %}
+                            <span class="badge bg-secondary">مخصص</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>عدد الصلاحيات:</strong><br>
+                        <span class="badge bg-info">{{ role.permissions|length }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>عدد المستخدمين:</strong><br>
+                        <span class="badge bg-success">{{ users_with_role|length }}</span>
+                    </div>
+                    
+                    {% if role.name == 'super_admin' %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-crown me-2"></i>
+                            <strong>دور محمي</strong><br>
+                            هذا الدور محمي ولا يمكن تعديله أو حذفه.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Permissions -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key me-2"></i>
+                        الصلاحيات ({{ role.permissions|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if role.permissions %}
+                        <div class="row">
+                            {% for permission in role.permissions %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border-left-success">
+                                        <div class="card-body py-2">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-check-circle text-success me-2"></i>
+                                                <div>
+                                                    <strong>{{ permission.description }}</strong>
+                                                    <br><small class="text-muted">{{ permission.name }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                            <p>لا توجد صلاحيات محددة لهذا الدور</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users with this role -->
+    {% if users_with_role %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2"></i>
+                            المستخدمون الذين لديهم هذا الدور ({{ users_with_role|length }})
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>المستخدم</th>
+                                        <th>البريد الإلكتروني</th>
+                                        <th>القسم</th>
+                                        <th>الحالة</th>
+                                        <th>نوع المستخدم</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users_with_role %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-circle fa-2x text-muted me-2"></i>
+                                                    <div>
+                                                        <strong>{{ user.get_full_name() }}</strong>
+                                                        <br><small class="text-muted">{{ user.username }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ user.email }}</td>
+                                            <td>{{ user.department or 'غير محدد' }}</td>
+                                            <td>
+                                                {% if user.is_active %}
+                                                    <span class="badge bg-success">مفعل</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">معطل</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if user.is_admin %}
+                                                    <span class="badge bg-warning">مدير</span>
+                                                {% else %}
+                                                    <span class="badge bg-info">مستخدم عادي</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('admin.user_permissions', user_id=user.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-user-cog me-1"></i>
+                                                    إدارة الصلاحيات
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

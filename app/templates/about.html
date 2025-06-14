@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}حول النظام{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center mb-5">
+                <h1 class="display-4 text-primary mb-3">
+                    <i class="fas fa-archive me-3"></i>
+                    أرشفة
+                </h1>
+                <p class="lead">نظام إدارة الوثائق المتكامل</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h2 class="text-center mb-4">حول نظام أرشفة</h2>
+                    
+                    <p class="lead text-center mb-4">
+                        نظام أرشفة هو حل شامل ومتطور لإدارة الوثائق والملفات، مصمم خصيصاً لتلبية احتياجات المؤسسات والشركات في العالم العربي.
+                    </p>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4 class="text-primary mb-3">
+                                <i class="fas fa-star me-2"></i>
+                                المميزات الرئيسية
+                            </h4>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    دعم كامل للغة العربية
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    واجهة مستخدم سهلة وبديهية
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    نظام صلاحيات متقدم
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    بحث متقدم وفهرسة ذكية
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    تصنيف وتنظيم الوثائق
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    سجل مراجعة شامل
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h4 class="text-primary mb-3">
+                                <i class="fas fa-cogs me-2"></i>
+                                التقنيات المستخدمة
+                            </h4>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fab fa-python text-warning me-2"></i>
+                                    Python & Flask
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-database text-info me-2"></i>
+                                    SQLAlchemy ORM
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fab fa-bootstrap text-primary me-2"></i>
+                                    Bootstrap 5
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fab fa-js-square text-warning me-2"></i>
+                                    JavaScript & jQuery
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-file-pdf text-danger me-2"></i>
+                                    PDF.js للعرض
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-search text-success me-2"></i>
+                                    Whoosh للبحث
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <h4 class="text-primary mb-3">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            الأمان والخصوصية
+                        </h4>
+                        <p>
+                            نحن نأخذ أمان بياناتك على محمل الجد. يستخدم النظام أحدث معايير الأمان لحماية وثائقك ومعلوماتك الحساسة.
+                        </p>
+                        <div class="row mt-4">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-lock fa-2x text-primary mb-2"></i>
+                                    <h6>تشفير البيانات</h6>
+                                    <small class="text-muted">جميع البيانات محمية بتشفير قوي</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-user-shield fa-2x text-success mb-2"></i>
+                                    <h6>نظام صلاحيات</h6>
+                                    <small class="text-muted">تحكم دقيق في صلاحيات المستخدمين</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-history fa-2x text-info mb-2"></i>
+                                    <h6>سجل المراجعة</h6>
+                                    <small class="text-muted">تتبع جميع العمليات والأنشطة</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <h4 class="text-primary mb-3">معلومات النظام</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>الإصدار:</strong> 1.0.0
+                            </div>
+                            <div class="col-md-6">
+                                <strong>تاريخ الإصدار:</strong> {{ moment().format('YYYY-MM-DD') }}
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>المطور:</strong> عمرو المطري
+                            </div>
+                            <div class="col-md-6">
+                                <strong>الترخيص:</strong> MIT License
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-home me-2"></i>
+                العودة للصفحة الرئيسية
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

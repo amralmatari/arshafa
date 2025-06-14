@@ -1,0 +1,886 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل الفئة - {{ category.name_ar or category.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-edit me-2"></i>
+                    تعديل الفئة: {{ category.name_ar or category.name }}
+                </h2>
+                <div>
+                    {% if return_to == 'categories' %}
+                    <a href="{{ url_for('admin.list_categories') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة لقائمة الفئات
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('admin.list_categories') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة لقائمة الفئات
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-folder-open me-2"></i>
+                        تعديل بيانات الفئة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- عرض الهيكل الهرمي الحالي -->
+                    <div class="alert alert-info mb-3">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-sitemap me-2"></i>
+                            الموقع الحالي في الهيكل الهرمي
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-folder text-primary me-2"></i>
+                            <div id="current-hierarchy-display">
+                                {% if current_hierarchy %}
+                                    {% for level in current_hierarchy %}
+                                        <span class="badge bg-secondary me-1">{{ level.name }}</span>
+                                        {% if not loop.last %}<i class="fas fa-arrow-left text-muted mx-1"></i>{% endif %}
+                                    {% endfor %}
+                                    <i class="fas fa-arrow-left text-muted mx-1"></i>
+                                {% else %}
+                                    <span class="badge bg-info me-1">الجذر</span>
+                                    <i class="fas fa-arrow-left text-muted mx-1"></i>
+                                {% endif %}
+                                <span class="badge bg-primary">{{ category.name_ar or category.name }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- عرض المسار الجديد المتوقع -->
+                    <div class="alert alert-success mb-4" id="new-hierarchy-preview" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-route me-2"></i>
+                            المسار الجديد المتوقع
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-folder text-success me-2"></i>
+                            <div id="new-hierarchy-display">
+                                <!-- سيتم ملؤه بواسطة JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تنبيه معلوماتي حول نقل الفئات -->
+                    <div class="alert alert-warning mb-4">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>
+                            معلومات مهمة حول نقل الفئات
+                        </h6>
+                        <ul class="mb-2">
+                            <li><strong>تغيير موقع الفئة:</strong> سيؤثر على جميع الفئات الفرعية التابعة لها</li>
+                            <li><strong>الفئات الرئيسية:</strong> يجب ألا تحتوي على وثائق مباشرة، فقط فئات فرعية</li>
+                            <li><strong>نقل الوثائق:</strong> عند تغيير نوع الفئة، تأكد من نقل الوثائق للفئات الفرعية المناسبة</li>
+                        </ul>
+                        {% if has_documents %}
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>تحذير:</strong> هذه الفئة تحتوي على {{ category.documents.count() }} وثيقة.
+                            لا يمكن جعلها فئة رئيسية إلا بعد نقل جميع الوثائق إلى فئات فرعية.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <form method="POST" action="{{ url_for('admin.edit_category', id=category.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="return_to" value="{{ return_to or 'admin' }}"/>
+                        
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    المعلومات الأساسية
+                                </h6>
+
+                                <div class="mb-3">
+                                    <label for="name_ar" class="form-label">اسم الفئة (بالعربية) *</label>
+                                    <input type="text" class="form-control" id="name_ar" name="name_ar"
+                                           value="{{ category.name_ar or '' }}" required maxlength="100">
+                                    <div class="form-text">الاسم الذي سيظهر في الواجهة العربية</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">اسم الفئة (بالإنجليزية)</label>
+                                    <input type="text" class="form-control" id="name" name="name"
+                                           value="{{ category.name or '' }}" maxlength="100">
+                                    <div class="form-text">الاسم التقني للفئة (اختياري)</div>
+                                </div>
+
+                            </div>
+
+                            <!-- الهيكل الهرمي -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-sitemap me-2"></i>
+                                    الهيكل الهرمي
+                                </h6>
+
+                                <!-- الفئة الرئيسية -->
+                                <div class="mb-3">
+                                    <label for="main_category_id" class="form-label">الفئة الرئيسية</label>
+                                    <select class="form-select" id="main_category_id" name="main_category_id">
+                                        <option value="">-- اختر الفئة الرئيسية --</option>
+                                        {% if can_be_main_category and not is_main_category %}
+                                        <option value="new_main">-- جعل هذه فئة رئيسية --</option>
+                                        {% endif %}
+                                        {% for main_category in main_categories %}
+                                        {% if main_category.id != category.id %}
+                                        <option value="{{ main_category.id }}">{{ main_category.name_ar or main_category.name }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    {% if not can_be_main_category and not is_main_category %}
+                                    <div class="form-text text-danger">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        لا يمكن جعل هذه الفئة رئيسية لأنها تحتوي على وثائق. يرجى نقل الوثائق أولاً.
+                                    </div>
+                                    {% elif is_main_category %}
+                                    <div class="form-text text-info">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        هذه فئة رئيسية بالفعل. يمكنك نقلها لتصبح فئة فرعية.
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- الفئة الفرعية الأولى -->
+                                <div class="mb-3" id="sub_category_1_container" style="display: none;">
+                                    <label for="sub_category_1_id" class="form-label">الفئة الفرعية الأولى</label>
+                                    <select class="form-select" id="sub_category_1_id" name="sub_category_1_id">
+                                        <option value="">-- اختر الفئة الفرعية الأولى --</option>
+                                    </select>
+                                </div>
+
+                                <!-- الفئة الفرعية الثانية -->
+                                <div class="mb-3" id="sub_category_2_container" style="display: none;">
+                                    <label for="sub_category_2_id" class="form-label">الفئة الفرعية الثانية</label>
+                                    <select class="form-select" id="sub_category_2_id" name="sub_category_2_id">
+                                        <option value="">-- اختر الفئة الفرعية الثانية --</option>
+                                    </select>
+                                </div>
+
+                                <!-- الفئة الفرعية الثالثة -->
+                                <div class="mb-3" id="sub_category_3_container" style="display: none;">
+                                    <label for="sub_category_3_id" class="form-label">الفئة الفرعية الثالثة</label>
+                                    <select class="form-select" id="sub_category_3_id" name="sub_category_3_id">
+                                        <option value="">-- اختر الفئة الفرعية الثالثة --</option>
+                                    </select>
+                                </div>
+
+                                <!-- حقل مخفي للفئة الرئيسية المحددة -->
+                                <input type="hidden" id="parent_id" name="parent_id" value="{{ category.parent_id or '' }}">
+
+                                <!-- معاينة المسار الجديد المتوقع -->
+                                <div id="new-hierarchy-preview" class="alert alert-info mt-3" style="display: none;">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-route me-2"></i>
+                                        المسار الجديد المتوقع:
+                                    </h6>
+                                    <div id="new-hierarchy-display"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الوصف بالعربية والإنجليزية - مساحة كاملة -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-align-left me-2"></i>
+                                    الوصف والتفاصيل
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="description_ar" class="form-label">الوصف (بالعربية)</label>
+                                            <textarea class="form-control" id="description_ar" name="description_ar"
+                                                      rows="4">{{ category.description_ar or '' }}</textarea>
+                                            <div class="form-text">وصف مفصل للفئة ومحتوياتها</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="description" class="form-label">الوصف (بالإنجليزية)</label>
+                                            <textarea class="form-control" id="description" name="description"
+                                                      rows="4">{{ category.description or '' }}</textarea>
+                                            <div class="form-text">الوصف التقني للفئة (اختياري)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الأيقونة واللون -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-palette me-2"></i>
+                                    المظهر والتصميم
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="icon" class="form-label">أيقونة الفئة</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i id="icon-preview" class="fas fa-{{ category.icon or 'folder' }}"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="icon" name="icon"
+                                                       value="{{ category.icon or 'folder' }}" placeholder="folder">
+                                            </div>
+                                            <div class="form-text">
+                                                اسم الأيقونة من Font Awesome (بدون fa-)
+                                                <br>
+                                                <small class="text-muted">
+                                                    أمثلة: folder, file, chart-bar, users, cog, home, star, heart
+                                                    <a href="https://fontawesome.com/icons" target="_blank" class="text-decoration-none ms-2">
+                                                        <i class="fas fa-external-link-alt"></i> تصفح المزيد
+                                                    </a>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="color" class="form-label">لون أيقونةالفئة</label>
+                                            <div class="input-group">
+                                                <input type="color" class="form-control form-control-color" id="color" name="color"
+                                                       value="{{ category.color or '#007bff' }}" title="اختر لون الفئة">
+                                                <input type="text" class="form-control" id="color-text"
+                                                       value="{{ category.color or '#007bff' }}" readonly>
+                                            </div>
+                                            <div class="form-text">
+                                                اللون المميز لأيقونة الفئة في الواجهة
+                                                <br>
+                                                <small class="text-muted">
+                                                    اختر لوناً مناسباً لتمييز أيقونة هذه الفئة عن الفئات الأخرى
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- أمثلة سريعة للأيقونات والألوان -->
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-3">
+                                                <h6 class="card-title mb-2">
+                                                    <i class="fas fa-lightbulb me-2"></i>
+                                                    أمثلة سريعة
+                                                </h6>
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <small class="text-muted d-block mb-2">أيقونات شائعة:</small>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary icon-example" data-icon="folder">
+                                                                <i class="fas fa-folder"></i> folder
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary icon-example" data-icon="file-alt">
+                                                                <i class="fas fa-file-alt"></i> file-alt
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary icon-example" data-icon="chart-bar">
+                                                                <i class="fas fa-chart-bar"></i> chart-bar
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary icon-example" data-icon="users">
+                                                                <i class="fas fa-users"></i> users
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary icon-example" data-icon="cog">
+                                                                <i class="fas fa-cog"></i> cog
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <small class="text-muted d-block mb-2">ألوان مقترحة:</small>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            <button type="button" class="btn btn-sm color-example" data-color="#007bff" style="background-color: #007bff; color: white;">أزرق</button>
+                                                            <button type="button" class="btn btn-sm color-example" data-color="#28a745" style="background-color: #28a745; color: white;">أخضر</button>
+                                                            <button type="button" class="btn btn-sm color-example" data-color="#dc3545" style="background-color: #dc3545; color: white;">أحمر</button>
+                                                            <button type="button" class="btn btn-sm color-example" data-color="#ffc107" style="background-color: #ffc107; color: black;">أصفر</button>
+                                                            <button type="button" class="btn btn-sm color-example" data-color="#6f42c1" style="background-color: #6f42c1; color: white;">بنفسجي</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+                        <!-- إحصائيات الفئة -->
+                        <div class="row mt-4 mb-4">
+                            <div class="col-12">
+                                <h6 class="text-info mb-3">
+                                    <i class="fas fa-chart-bar me-2"></i>
+                                    إحصائيات الفئة
+                                </h6>
+                                <div class="row g-3">
+                                    <!-- عدد الوثائق المباشرة -->
+                                    <div class="col-6 col-lg-3 mb-2">
+                                        <div class="card bg-primary text-white border-0 shadow-sm" style="border-radius: 12px; height: 85px;">
+                                            <div class="card-body d-flex flex-column justify-content-center align-items-center p-1">
+                                                <i class="fas fa-file-alt mb-1" style="font-size: 1.2rem;"></i>
+                                                <h5 class="mb-0 fw-bold">{{ category.documents.count() }}</h5>
+                                                <small class="text-center" style="font-size: 0.7rem; line-height: 1;">وثيقة مباشرة</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- عدد الفئات الفرعية -->
+                                    <div class="col-6 col-lg-3 mb-2">
+                                        <div class="card bg-success text-white border-0 shadow-sm" style="border-radius: 12px; height: 85px;">
+                                            <div class="card-body d-flex flex-column justify-content-center align-items-center p-1">
+                                                <i class="fas fa-folder mb-1" style="font-size: 1.2rem;"></i>
+                                                <h5 class="mb-0 fw-bold">{{ category.children.count() }}</h5>
+                                                <small class="text-center" style="font-size: 0.7rem; line-height: 1;">فئة فرعية</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- المستوى في الهيكل -->
+                                    <div class="col-6 col-lg-3 mb-2">
+                                        <div class="card bg-info text-white border-0 shadow-sm" style="border-radius: 12px; height: 85px;">
+                                            <div class="card-body d-flex flex-column justify-content-center align-items-center p-1">
+                                                <i class="fas fa-layer-group mb-1" style="font-size: 1.2rem;"></i>
+                                                <h5 class="mb-0 fw-bold">
+                                                    {% if category.parent_id %}
+                                                        {% set level = current_hierarchy|length if current_hierarchy else 1 %}
+                                                        {{ level }}
+                                                    {% else %}
+                                                        0
+                                                    {% endif %}
+                                                </h5>
+                                                <small class="text-center" style="font-size: 0.7rem; line-height: 1;">مستوى الهيكل</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- تاريخ الإنشاء -->
+                                    <div class="col-6 col-lg-3 mb-2">
+                                        <div class="card bg-warning text-white border-0 shadow-sm" style="border-radius: 12px; height: 85px;">
+                                            <div class="card-body d-flex flex-column justify-content-center align-items-center p-1">
+                                                <i class="fas fa-calendar-plus mb-1" style="font-size: 1.2rem;"></i>
+                                                <h6 class="mb-0 fw-bold" style="font-size: 0.9rem;">{{ category.created_at.strftime('%m-%d') }}</h6>
+                                                <small class="text-center" style="font-size: 0.7rem; line-height: 1;">تاريخ الإنشاء</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-save me-2"></i>
+                                            حفظ التغييرات
+                                        </button>
+                                        <a href="{{ url_for('admin.list_categories') }}"
+                                           class="btn btn-secondary btn-lg ms-2">
+                                            <i class="fas fa-times me-2"></i>
+                                            إلغاء
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-danger"
+                                                onclick="confirmDelete()">
+                                            <i class="fas fa-trash me-2"></i>
+                                            حذف الفئة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    تأكيد حذف الفئة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف الفئة <strong>{{ category.name_ar or category.name }}</strong>؟</p>
+                <p class="text-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    سيتم حذف جميع الفئات الفرعية والوثائق المرتبطة بها!
+                </p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    هذا الإجراء لا يمكن التراجع عنه!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" action="{{ url_for('admin.delete_category', id=category.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>
+                        حذف نهائياً
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pass data to JavaScript -->
+<script>
+    // Global variables for JavaScript
+    var CURRENT_CATEGORY_ID = {{ category.id }};
+    var CURRENT_HIERARCHY = {{ current_hierarchy | tojson if current_hierarchy else '[]' }};
+    var CURRENT_PARENT_ID = '{{ category.parent_id or "" }}';
+    var CATEGORY_NAME = '{{ category.name_ar or category.name }}';
+</script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const iconInput = document.getElementById('icon');
+    const colorInput = document.getElementById('color');
+    const colorText = document.getElementById('color-text');
+    const iconPreview = document.getElementById('icon-preview');
+
+    // Update icon preview
+    function updateIconPreview() {
+        if (iconInput && iconPreview) {
+            const iconName = iconInput.value.trim() || 'folder';
+            iconPreview.className = `fas fa-${iconName}`;
+            console.log('Icon updated to:', iconName);
+        }
+    }
+
+    // Update color preview
+    function updateColorPreview() {
+        if (colorInput && colorText) {
+            const color = colorInput.value;
+            colorText.value = color;
+            console.log('Color updated to:', color);
+        }
+    }
+
+    // Event listeners
+    if (iconInput) {
+        iconInput.addEventListener('input', updateIconPreview);
+        iconInput.addEventListener('change', updateIconPreview);
+    }
+
+    if (colorInput) {
+        colorInput.addEventListener('input', updateColorPreview);
+        colorInput.addEventListener('change', updateColorPreview);
+    }
+
+    // Initialize previews
+    updateIconPreview();
+    updateColorPreview();
+
+    // Quick examples functionality
+    document.querySelectorAll('.icon-example').forEach(button => {
+        button.addEventListener('click', function() {
+            const iconName = this.getAttribute('data-icon');
+            if (iconInput) {
+                iconInput.value = iconName;
+                updateIconPreview();
+            }
+        });
+    });
+
+    document.querySelectorAll('.color-example').forEach(button => {
+        button.addEventListener('click', function() {
+            const colorValue = this.getAttribute('data-color');
+            if (colorInput) {
+                colorInput.value = colorValue;
+                updateColorPreview();
+            }
+        });
+    });
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const nameAr = nameArInput.value.trim();
+        
+        if (!nameAr) {
+            e.preventDefault();
+            alert('اسم الفئة بالعربية مطلوب');
+            nameArInput.focus();
+            return false;
+        }
+
+        if (!confirm('هل أنت متأكد من حفظ التغييرات؟')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+
+function confirmDelete() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// Hierarchical category management
+$(document).ready(function() {
+    console.log('Current category ID:', CURRENT_CATEGORY_ID);
+    console.log('Current hierarchy:', CURRENT_HIERARCHY);
+
+    // Set up the current hierarchy if exists
+    if (CURRENT_HIERARCHY && CURRENT_HIERARCHY.length > 0) {
+        setupCurrentHierarchy(CURRENT_HIERARCHY, 0);
+    }
+
+    // Event handlers for category selection
+    $('#main_category_id').change(function(event, skipReset) {
+        var selectedValue = $(this).val();
+        console.log('Main category changed to:', selectedValue);
+
+        // Reset form to clean state unless explicitly skipped
+        if (!skipReset) {
+            resetFormToCleanState();
+        }
+
+        if (selectedValue && selectedValue !== '' && selectedValue !== 'new_main') {
+            loadSubcategories(selectedValue, '#sub_category_1_id', '#sub_category_1_container', function() {
+                updateParentId();
+                updateNewHierarchyPreview();
+            });
+        } else {
+            updateParentId();
+            updateNewHierarchyPreview();
+        }
+    });
+
+    $('#sub_category_1_id').change(function(event, skipReset) {
+        var selectedValue = $(this).val();
+        console.log('Sub category 1 changed to:', selectedValue);
+
+        // Always clear subsequent subcategory selections
+        $('#sub_category_2_id, #sub_category_3_id').val('');
+        $('#sub_category_2_container, #sub_category_3_container').hide();
+        // Clear their options
+        $('#sub_category_2_id, #sub_category_3_id').each(function() {
+            $(this).empty().append('<option value="">-- اختر الفئة الفرعية --</option>');
+        });
+
+        if (selectedValue && selectedValue !== '') {
+            loadSubcategories(selectedValue, '#sub_category_2_id', '#sub_category_2_container', function() {
+                updateParentId();
+                updateNewHierarchyPreview();
+            });
+        } else {
+            updateParentId();
+            updateNewHierarchyPreview();
+        }
+    });
+
+    $('#sub_category_2_id').change(function(event, skipReset) {
+        var selectedValue = $(this).val();
+        console.log('Sub category 2 changed to:', selectedValue);
+
+        // Always clear subsequent subcategory selections
+        $('#sub_category_3_id').val('');
+        $('#sub_category_3_container').hide();
+        // Clear options
+        $('#sub_category_3_id').empty().append('<option value="">-- اختر الفئة الفرعية --</option>');
+
+        if (selectedValue && selectedValue !== '') {
+            loadSubcategories(selectedValue, '#sub_category_3_id', '#sub_category_3_container', function() {
+                updateParentId();
+                updateNewHierarchyPreview();
+            });
+        } else {
+            updateParentId();
+            updateNewHierarchyPreview();
+        }
+    });
+
+    $('#sub_category_3_id').change(function() {
+        updateParentId();
+        updateNewHierarchyPreview();
+    });
+});
+
+// Set up current hierarchy
+function setupCurrentHierarchy(hierarchy, index) {
+    if (index >= hierarchy.length) {
+        updateParentId();
+        return;
+    }
+
+    var level = index + 1;
+    var categoryId = hierarchy[index].id;
+    console.log('Setting level', level, 'to category', categoryId, hierarchy[index].name);
+
+    if (level === 1) {
+        $('#main_category_id').val(categoryId);
+        // تحميل الفئات الفرعية للمستوى الأول
+        loadSubcategories(categoryId, '#sub_category_1_id', '#sub_category_1_container', function() {
+            setupCurrentHierarchy(hierarchy, index + 1);
+        });
+    } else if (level === 2) {
+        $('#sub_category_1_id').val(categoryId);
+        if (index < hierarchy.length - 1) {
+            loadSubcategories(categoryId, '#sub_category_2_id', '#sub_category_2_container', function() {
+                setupCurrentHierarchy(hierarchy, index + 1);
+            });
+        } else {
+            setupCurrentHierarchy(hierarchy, index + 1);
+        }
+    } else if (level === 3) {
+        $('#sub_category_2_id').val(categoryId);
+        if (index < hierarchy.length - 1) {
+            loadSubcategories(categoryId, '#sub_category_3_id', '#sub_category_3_container', function() {
+                setupCurrentHierarchy(hierarchy, index + 1);
+            });
+        } else {
+            setupCurrentHierarchy(hierarchy, index + 1);
+        }
+    } else if (level === 4) {
+        $('#sub_category_3_id').val(categoryId);
+        setupCurrentHierarchy(hierarchy, index + 1);
+    }
+}
+
+// Hierarchical category selection
+function loadSubcategories(parentId, targetSelectId, containerSelector, callback) {
+    console.log('Loading subcategories for parent:', parentId, 'target:', targetSelectId);
+    if (parentId && parentId != '0' && parentId != '') {
+        $.get('/documents/api/subcategories/' + parentId)
+            .done(function(data) {
+                console.log('Subcategories received:', data);
+                var select = $(targetSelectId);
+                select.empty();
+
+                // Filter out the current category being edited
+                var filteredData = data.filter(function(category) {
+                    return category.id != CURRENT_CATEGORY_ID;
+                });
+
+                if (filteredData.length > 0) {
+                    select.append('<option value="">-- اختر الفئة الفرعية --</option>');
+                    $.each(filteredData, function(index, category) {
+                        select.append('<option value="' + category.id + '">' + category.name + '</option>');
+                    });
+                    $(containerSelector).show();
+                    console.log('Showing container:', containerSelector, 'with', filteredData.length, 'options');
+                } else {
+                    console.log('No valid subcategories found, hiding container:', containerSelector);
+                    $(containerSelector).hide();
+                    select.append('<option value="">-- لا توجد فئات فرعية --</option>');
+                }
+
+                if (callback) callback();
+            })
+            .fail(function() {
+                console.error('فشل في تحميل الفئات الفرعية');
+                $(containerSelector).hide();
+                var select = $(targetSelectId);
+                select.empty().append('<option value="">-- خطأ في التحميل --</option>');
+                if (callback) callback();
+            });
+    } else {
+        console.log('No parent ID provided, hiding container:', containerSelector);
+        $(containerSelector).hide();
+        $(targetSelectId).empty().append('<option value="">-- اختر الفئة الفرعية --</option>');
+        if (callback) callback();
+    }
+}
+
+function updateParentId() {
+    // تحديد الفئة الرئيسية بناءً على آخر فئة محددة
+    var parentId = '';
+
+    if ($('#sub_category_3_id').val() && $('#sub_category_3_id').val() != '') {
+        parentId = $('#sub_category_3_id').val();
+    } else if ($('#sub_category_2_id').val() && $('#sub_category_2_id').val() != '') {
+        parentId = $('#sub_category_2_id').val();
+    } else if ($('#sub_category_1_id').val() && $('#sub_category_1_id').val() != '') {
+        parentId = $('#sub_category_1_id').val();
+    } else if ($('#main_category_id').val() && $('#main_category_id').val() != '') {
+        var mainCategoryValue = $('#main_category_id').val();
+        // إذا كان الخيار "جعل هذه فئة رئيسية" فلا تحدد فئة رئيسية
+        if (mainCategoryValue !== 'new_main') {
+            parentId = mainCategoryValue;
+        }
+    }
+
+    $('#parent_id').val(parentId);
+    console.log('Updated parent_id to:', parentId);
+}
+
+// Reset form to clean state
+function resetFormToCleanState() {
+    console.log('Resetting form to clean state');
+
+    // Clear all subcategory selections
+    $('#sub_category_1_id, #sub_category_2_id, #sub_category_3_id').val('');
+
+    // Hide all subcategory containers
+    $('#sub_category_1_container, #sub_category_2_container, #sub_category_3_container').hide();
+
+    // Clear their options (except the default option)
+    $('#sub_category_1_id, #sub_category_2_id, #sub_category_3_id').each(function() {
+        $(this).empty().append('<option value="">-- اختر الفئة الفرعية --</option>');
+    });
+}
+
+// Check if container should be visible based on available options
+function checkContainerVisibility(selectId, containerId) {
+    var select = $(selectId);
+    var container = $(containerId);
+    var optionCount = select.find('option').length;
+
+    // If only default option exists (or no options), hide container
+    if (optionCount <= 1) {
+        console.log('Hiding container', containerId, 'due to insufficient options:', optionCount);
+        container.hide();
+        select.val('');
+        return false;
+    }
+
+    return true;
+}
+
+// Update new hierarchy preview
+function updateNewHierarchyPreview() {
+    var newHierarchyDisplay = $('#new-hierarchy-display');
+    var newHierarchyPreview = $('#new-hierarchy-preview');
+    var categoryName = CATEGORY_NAME;
+
+    // Get current hierarchy for comparison
+    var currentHierarchy = CURRENT_HIERARCHY;
+    var currentParentId = CURRENT_PARENT_ID;
+
+    // Build new hierarchy path
+    var hierarchyParts = [];
+    var newParentId = '';
+    var isMainCategory = false;
+
+    // Check if making it a main category
+    if ($('#main_category_id').val() === 'new_main') {
+        hierarchyParts.push('<span class="badge bg-info me-1">الجذر</span>');
+        hierarchyParts.push('<i class="fas fa-arrow-left text-muted mx-1"></i>');
+        hierarchyParts.push('<span class="badge bg-success">' + categoryName + '</span>');
+        hierarchyParts.push('<span class="text-success ms-2">(فئة رئيسية)</span>');
+        isMainCategory = true;
+        newParentId = '';
+    } else {
+        // Build hierarchy from selected categories
+        var hasChanges = false;
+
+        if ($('#main_category_id').val() && $('#main_category_id').val() !== '') {
+            var mainCategoryText = $('#main_category_id option:selected').text();
+            if (mainCategoryText !== '-- اختر الفئة الرئيسية --') {
+                hierarchyParts.push('<span class="badge bg-secondary me-1">' + mainCategoryText + '</span>');
+                hasChanges = true;
+                newParentId = $('#main_category_id').val();
+            }
+        }
+
+        if ($('#sub_category_1_id').val() && $('#sub_category_1_id').val() !== '') {
+            if (hierarchyParts.length > 0) {
+                hierarchyParts.push('<i class="fas fa-arrow-left text-muted mx-1"></i>');
+            }
+            var subCategory1Text = $('#sub_category_1_id option:selected').text();
+            hierarchyParts.push('<span class="badge bg-secondary me-1">' + subCategory1Text + '</span>');
+            hasChanges = true;
+            newParentId = $('#sub_category_1_id').val();
+        }
+
+        if ($('#sub_category_2_id').val() && $('#sub_category_2_id').val() !== '') {
+            if (hierarchyParts.length > 0) {
+                hierarchyParts.push('<i class="fas fa-arrow-left text-muted mx-1"></i>');
+            }
+            var subCategory2Text = $('#sub_category_2_id option:selected').text();
+            hierarchyParts.push('<span class="badge bg-secondary me-1">' + subCategory2Text + '</span>');
+            hasChanges = true;
+            newParentId = $('#sub_category_2_id').val();
+        }
+
+        if ($('#sub_category_3_id').val() && $('#sub_category_3_id').val() !== '') {
+            if (hierarchyParts.length > 0) {
+                hierarchyParts.push('<i class="fas fa-arrow-left text-muted mx-1"></i>');
+            }
+            var subCategory3Text = $('#sub_category_3_id option:selected').text();
+            hierarchyParts.push('<span class="badge bg-secondary me-1">' + subCategory3Text + '</span>');
+            hasChanges = true;
+            newParentId = $('#sub_category_3_id').val();
+        }
+
+        // Add current category at the end
+        if (hierarchyParts.length > 0) {
+            hierarchyParts.push('<i class="fas fa-arrow-left text-muted mx-1"></i>');
+        } else if (!hasChanges) {
+            // No changes, don't show preview
+            newHierarchyPreview.hide();
+            return;
+        }
+
+        hierarchyParts.push('<span class="badge bg-success">' + categoryName + '</span>');
+
+        // Add level indicator
+        var level = 0;
+        if ($('#sub_category_3_id').val()) level = 4;
+        else if ($('#sub_category_2_id').val()) level = 3;
+        else if ($('#sub_category_1_id').val()) level = 2;
+        else if ($('#main_category_id').val() && $('#main_category_id').val() !== 'new_main') level = 1;
+
+        if (level > 0) {
+            hierarchyParts.push('<span class="text-success ms-2">(مستوى ' + level + ')</span>');
+        }
+    }
+
+    // Check if new hierarchy is same as current
+    var isSameAsCurrentHierarchy = false;
+
+    if (isMainCategory && !currentParentId) {
+        // Both are main categories
+        isSameAsCurrentHierarchy = true;
+    } else if (!isMainCategory && newParentId === currentParentId) {
+        // Same parent ID
+        isSameAsCurrentHierarchy = true;
+    }
+
+    // Show or hide preview based on whether there are changes
+    if (isSameAsCurrentHierarchy) {
+        newHierarchyPreview.hide();
+    } else {
+        // Update display and show preview
+        newHierarchyDisplay.html(hierarchyParts.join(''));
+        newHierarchyPreview.show();
+    }
+}
+</script>
+{% endblock %}

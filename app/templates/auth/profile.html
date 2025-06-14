@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% set title = "الملف الشخصي" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        معلومات المستخدم
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if user.profile_image %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_image) }}" 
+                             alt="{{ user.get_full_name() }}" 
+                             class="rounded-circle img-thumbnail" 
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                        <div class="avatar-placeholder rounded-circle mx-auto d-flex align-items-center justify-content-center bg-light"
+                             style="width: 150px; height: 150px; font-size: 3rem;">
+                            <i class="fas fa-user text-secondary"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <h4 class="mb-0">{{ user.get_full_name() }}</h4>
+                    <p class="text-muted">{{ user.username }}</p>
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{{ url_for('auth.edit_profile') }}" class="btn btn-primary">
+                            <i class="fas fa-edit me-1"></i>
+                            تعديل الملف الشخصي
+                        </a>
+                        <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-key me-1"></i>
+                            تغيير كلمة المرور
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        الصلاحيات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>الدور:</strong> 
+                        <span class="badge bg-info">{{ user.role.name if user.role else 'مستخدم عادي' }}</span>
+                    </p>
+                    <p>
+                        <strong>الحالة:</strong> 
+                        <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                            {{ 'نشط' if user.is_active else 'غير نشط' }}
+                        </span>
+                    </p>
+                    {% if user.is_admin %}
+                    <p>
+                        <span class="badge bg-danger">مدير النظام</span>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        المعلومات الشخصية
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">الاسم الكامل:</div>
+                        <div class="col-md-8">{{ user.first_name }} {{ user.last_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">البريد الإلكتروني:</div>
+                        <div class="col-md-8">
+                            {{ user.email }}
+                            {% if user.email_confirmed is defined and not user.email_confirmed %}
+                            <span class="badge bg-warning ms-2">غير مؤكد</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">اسم المستخدم:</div>
+                        <div class="col-md-8">{{ user.username }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">القسم:</div>
+                        <div class="col-md-8">{{ user.department or 'غير محدد' }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">رقم الهاتف:</div>
+                        <div class="col-md-8">{{ user.phone or 'غير محدد' }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">تاريخ التسجيل:</div>
+                        <div class="col-md-8">
+                            {% if user.created_at %}
+                                {{ moment(user.created_at).format('YYYY/MM/DD HH:mm') }}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">آخر تسجيل دخول:</div>
+                        <div class="col-md-8">
+                            {% if user.last_login %}
+                                {{ moment(user.last_login).format('YYYY/MM/DD HH:mm') }}
+                            {% else %}
+                                غير محدد
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        إحصائيات النشاط
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card text-center h-100">
+                                <div class="card-body">
+                                    <h3 class="text-primary">{{ user.authored_documents.count() if user.authored_documents else 0 }}</h3>
+                                    <p class="mb-0">الوثائق المنشأة</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card text-center h-100">
+                                <div class="card-body">
+                                    <h3 class="text-success">{{ user.approved_documents.count() if user.approved_documents else 0 }}</h3>
+                                    <p class="mb-0">الوثائق المعتمدة</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card text-center h-100">
+                                <div class="card-body">
+                                    <h3 class="text-info">{{ moment(user.last_seen).fromNow() }}</h3>
+                                    <p class="mb-0">آخر نشاط</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
